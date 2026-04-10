@@ -55,24 +55,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GOV-01 | Phase TBD | Pending |
-| GOV-02 | Phase TBD | Pending |
-| GOV-03 | Phase TBD | Pending |
-| GOV-04 | Phase TBD | Pending |
-| SAFE-01 | Phase TBD | Pending |
-| SAFE-02 | Phase TBD | Pending |
-| SAFE-03 | Phase TBD | Pending |
-| SAFE-04 | Phase TBD | Pending |
-| QUAL-01 | Phase TBD | Pending |
-| QUAL-02 | Phase TBD | Pending |
-| QUAL-03 | Phase TBD | Pending |
-| QUAL-04 | Phase TBD | Pending |
+| GOV-01 | Phase 1 | Pending |
+| GOV-02 | Phase 2 | Pending |
+| GOV-03 | Phase 2 | Pending |
+| GOV-04 | Phase 1 | Pending |
+| SAFE-01 | Phase 1 | Pending |
+| SAFE-02 | Phase 2 | Pending |
+| SAFE-03 | Phase 2 | Pending |
+| SAFE-04 | Phase 1 | Pending |
+| QUAL-01 | Phase 3 | Pending |
+| QUAL-02 | Phase 3 | Pending |
+| QUAL-03 | Phase 3 | Pending |
+| QUAL-04 | Phase 2 | Pending |
 
 **Coverage:**
 - v1 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12 ⚠️
+- Mapped to phases: 12
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-10*
-*Last updated: 2026-04-10 after initial definition*
+*Last updated: 2026-04-10 after roadmap creation*
