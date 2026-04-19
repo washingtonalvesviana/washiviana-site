@@ -33,7 +33,7 @@ if ($httpCode == 200 && isset($userInfo['sub'])) {
     echo "✅ Person URN: $personUrn\n\n";
     
     // Atualizar no banco
-    $pdo = new PDO('pgsql:host=168.231.88.4;port=5434;dbname=washiviana', 'postgres', 'DevCleveris@2025');
+    $pdo = new PDO('getenv('PG_DSN') ?: 'pgsql:host=YOUR_HOST;port=5432;dbname=YOUR_DB'', getenv('PG_USER') ?: 'YOUR_DB_USER', getenv('PG_PASS') ?: 'YOUR_DB_PASSWORD');
     $stmt = $pdo->prepare("UPDATE redes_sociais_config SET access_token = ?, person_urn = ? WHERE rede = 'linkedin'");
     $stmt->execute([$token, $personUrn]);
     echo "✅ Token e Person URN atualizados no banco!\n\n";

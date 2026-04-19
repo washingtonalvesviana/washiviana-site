@@ -9,9 +9,9 @@ echo "=== VERIFICAÇÃO DE IDENTIDADE ===\n\n";
 
 try {
     $pdo = new PDO(
-        "pgsql:host=168.231.88.4;port=5434;dbname=washiviana",
-        'postgres',
-        'DevCleveris@2025'
+        getenv('PG_DSN') ?: 'pgsql:host=YOUR_HOST;port=5432;dbname=YOUR_DB',
+        getenv('PG_USER') ?: 'YOUR_DB_USER',
+        getenv('PG_PASS') ?: 'YOUR_DB_PASSWORD'
     );
     
     $stmt = $pdo->query("SELECT access_token, person_urn FROM redes_sociais WHERE tipo = 'linkedin'");

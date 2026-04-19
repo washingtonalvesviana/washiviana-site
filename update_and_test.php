@@ -2,7 +2,7 @@
 require_once __DIR__ . '/api/config.php';
 
 // Usar PDO global do config ou fallback para o PostgreSQL de diagnóstico
-$pdo = $pdo ?? new PDO('pgsql:host=168.231.88.4;port=5434;dbname=washiviana', 'postgres', 'DevCleveris@2025');
+$pdo = $pdo ?? new PDO('getenv('PG_DSN') ?: 'pgsql:host=YOUR_HOST;port=5432;dbname=YOUR_DB'', getenv('PG_USER') ?: 'YOUR_DB_USER', getenv('PG_PASS') ?: 'YOUR_DB_PASSWORD');
 
 // Atualizar Person URN
 $stmt = $pdo->prepare('UPDATE redes_sociais_config SET person_urn = ? WHERE rede = ?');

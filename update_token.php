@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/api/config.php';
 
-$newToken = 'AQVAgckK7pOfaRZhXua2gLCKcw4M1_Xkcpk93GcP_U95QOzdT8v7N8yyIq2jfl09nCrl_Lmtfyi-BIw4AJrwKnfYQNnpAXooLXP-cUfK7DTVkCXEWS6vyQ_mQW3xpAqUF6uPEX_SuZme4F-qR3NZEzWM5R48iBcyTVUWWLR8xnCqNgeADyMmHjXEsGuunfS1l2Kugex2BwlnlvRGGhSYE3_0JfKkcuelpMDrzAC0Zra7V9LldoJQ-mn7nObnx2s33hviGNrK2eAiJ6s8_YL8GeyzrvnZtx9JUxXp5LiFe3ZlNABYCIZXK0Bz7y1gSPvy-jEEGTBsLh5xsvZUPTsqtXAdlC1chQ';
+$newToken = getenv('LINKEDIN_NEW_TOKEN') ?: 'YOUR_NEW_LINKEDIN_TOKEN';
 
 echo "Token a salvar: " . strlen($newToken) . " caracteres\n";
 

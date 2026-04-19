@@ -32,6 +32,10 @@ backups/
 .planning/
 .agent/
 
+# Next.js build artifacts
+tailormade/.next/
+tailormade/tsconfig.tsbuildinfo
+
 # OS
 desktop.ini
 
