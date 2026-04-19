@@ -1,0 +1,11 @@
+[Unit]
+Description=Timer to run Washiviana - Articles Publish Worker every minute
+
+[Timer]
+OnUnitActiveSec=1min
+OnBootSec=1min
+Persistent=true
+Unit=washiviana-articles-publish.service
+
+[Install]
+WantedBy=timers.target

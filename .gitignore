@@ -1,0 +1,41 @@
+# PHP and web project
+vendor/
+node_modules/
+.env
+*.env
+*.local.php
+config.local.php
+api/config.local.php
+api/config.local.php.bak*
+*.log
+*.cache
+.cache/
+.cache*
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Editor / IDE
+.idea/
+.vscode/
+
+# Build / temporary
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Local data and artifacts
+uploads/
+backups/
+.planning/
+.agent/
+
+# OS
+desktop.ini
+
+# Database dumps created during development
+*.sql.gz
+*.sqlite
+*.sqlite3

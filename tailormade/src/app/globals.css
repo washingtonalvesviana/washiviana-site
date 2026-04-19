@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme {
+  --font-nunito: var(--font-nunito);
+  --color-brand: #2B6FA1;
+  --color-accent: #00FFC8;
+  --color-dark: #05101A;
+  
+  --spacing-8: 2rem;
+}
+
+@layer base {
+  body {
+    @apply bg-dark text-white;
+  }
+}
+
+@layer utilities {
+  .text-shadow-glow {
+    text-shadow: 0 0 20px rgba(0, 255, 200, 0.4);
+  }
+}
