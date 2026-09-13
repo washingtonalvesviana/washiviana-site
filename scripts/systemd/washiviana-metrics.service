@@ -1,0 +1,15 @@
+[Unit]
+Description=Washiviana - Social Metrics Collector
+After=network.target
+
+[Service]
+Type=oneshot
+User=washi
+WorkingDirectory=/home/washi/washiviana-site
+ExecStart=/usr/bin/php /home/washi/washiviana-site/scripts/metrics_worker.php
+Nice=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

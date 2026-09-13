@@ -107,6 +107,7 @@ washiviana.com/
 │   ├── worker_publish_scheduled.php   # Publica variantes sociais agendadas
 │   ├── video_worker.php               # Processa video_jobs (FFmpeg/provider)
 │   ├── radar_run.php                  # Coleta do Radar via CLI
+│   ├── metrics_worker.php             # Coleta métricas das publicações sociais
 │   ├── maintenance/                   # Utilitários pontuais (tokens, fix de tabelas)
 │   └── systemd/                       # Units e timers de exemplo
 ├── database/                 # Schema canônico PostgreSQL + seed + legacy
@@ -171,6 +172,7 @@ Em produção, os workers rodam a cada minuto via **systemd timers** (`scripts/s
 - `worker_publish_scheduled.php` — variantes sociais com `scheduled_at` vencido e status `pronto`.
 - `video_worker.php` — jobs `pending` de `video_jobs`; usa provider de vídeo e faz fallback para FFmpeg.
 - `radar_run.php` — coleta do Radar (`--topic=ID` ou `--all`).
+- `metrics_worker.php` — coleta curtidas/comentários/alcance das publicações (LinkedIn/Instagram/Facebook) e grava snapshots em `metricas_publicacoes` (`--rede=`, `--limit=`).
 
 Falhas de job podem notificar por e-mail (`notify_email`) e, se configurado, para o Sentry.
 
@@ -207,7 +209,7 @@ Falhas de job podem notificar por e-mail (`notify_email`) e, se configurado, par
 ## Limitações conhecidas / próximos passos
 
 - O CSS do Tailwind é consumido como arquivo compilado versionado; **não há, hoje, configuração de build na raiz** do repositório.
-- Analytics social é parcial (registro de publicações; painel consolidado ainda não existe).
+- Analytics social coleta métricas via API (worker `metrics_worker.php`); requer token válido e permissões de insights por rede.
 - Botão "gerar i18n/SEO em lote" (`gerarI18nSeoBulkArtigos`) está referenciado na UI sem implementação (pré-existente).
 - RBAC é binário (autenticado/não autenticado); não há papéis/permissões granulares.
 - `admin/artigos.php` está em CRLF; normalizar quando conveniente.

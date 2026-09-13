@@ -37,6 +37,7 @@ $views = 0; $likes = 0; $shares = 0;
 $topPages = [];
 $topPagesPeriod = [];
 $linkedinPublicacoes = [];
+$publicacoesMetricas = [];
 
 $periodFrom = $_GET['from'] ?? '';
 $periodTo = $_GET['to'] ?? '';
@@ -89,6 +90,21 @@ try {
 
             $stmt = $pdo->query("SELECT pr.id, pr.artigo_id, pr.post_id, pr.url_post, pr.publicado_em, a.titulo, a.slug FROM publicacoes_redes pr LEFT JOIN artigos a ON a.id = pr.artigo_id WHERE pr.rede = 'linkedin' ORDER BY pr.publicado_em DESC NULLS LAST, pr.id DESC LIMIT 10");
             $linkedinPublicacoes = $stmt->fetchAll();
+
+            $stmt = $pdo->query("SELECT pr.id, pr.rede, pr.artigo_id, pr.post_id, pr.publicado_em, a.titulo, a.slug,
+                    m.data_coleta, m.visualizacoes, m.curtidas, m.comentarios, m.compartilhamentos, m.cliques, m.alcance, m.engajamento
+                FROM publicacoes_redes pr
+                LEFT JOIN artigos a ON a.id = pr.artigo_id
+                LEFT JOIN metricas_publicacoes m ON m.id = (
+                    SELECT m2.id FROM metricas_publicacoes m2
+                    WHERE m2.publicacao_id = pr.id
+                    ORDER BY m2.data_coleta DESC, m2.id DESC
+                    LIMIT 1
+                )
+                WHERE pr.status = 'publicado'
+                ORDER BY pr.publicado_em DESC NULLS LAST, pr.id DESC
+                LIMIT 50");
+            $publicacoesMetricas = $stmt->fetchAll();
         } else {
             $stmt = $pdo->query("SELECT COUNT(*) FROM site_accesses");
             $siteVisitsTotal = (int)$stmt->fetchColumn();
@@ -114,6 +130,21 @@ try {
 
             $stmt = $pdo->query("SELECT pr.id, pr.artigo_id, pr.post_id, pr.url_post, pr.publicado_em, a.titulo, a.slug FROM publicacoes_redes pr LEFT JOIN artigos a ON a.id = pr.artigo_id WHERE pr.rede = 'linkedin' ORDER BY (pr.publicado_em IS NULL), pr.publicado_em DESC, pr.id DESC LIMIT 10");
             $linkedinPublicacoes = $stmt->fetchAll();
+
+            $stmt = $pdo->query("SELECT pr.id, pr.rede, pr.artigo_id, pr.post_id, pr.publicado_em, a.titulo, a.slug,
+                    m.data_coleta, m.visualizacoes, m.curtidas, m.comentarios, m.compartilhamentos, m.cliques, m.alcance, m.engajamento
+                FROM publicacoes_redes pr
+                LEFT JOIN artigos a ON a.id = pr.artigo_id
+                LEFT JOIN metricas_publicacoes m ON m.id = (
+                    SELECT m2.id FROM metricas_publicacoes m2
+                    WHERE m2.publicacao_id = pr.id
+                    ORDER BY m2.data_coleta DESC, m2.id DESC
+                    LIMIT 1
+                )
+                WHERE pr.status = 'publicado'
+                ORDER BY (pr.publicado_em IS NULL), pr.publicado_em DESC, pr.id DESC
+                LIMIT 50");
+            $publicacoesMetricas = $stmt->fetchAll();
         }
     }
 } catch (Exception $e) {
@@ -731,6 +762,58 @@ try {
                                 <?php endforeach; ?>
                             </ol>
                         </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 30px;">
+                <div class="card-header">
+                    <h3>Métricas por publicação</h3>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Último snapshot coletado por publicação (worker <code>scripts/metrics_worker.php</code>).</p>
+                    <?php if (!empty($publicacoesMetricas)): ?>
+                        <div style="overflow-x:auto;">
+                            <table class="admin-table" style="width:100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align:left; padding:8px;">Rede</th>
+                                        <th style="text-align:left; padding:8px;">Artigo</th>
+                                        <th style="text-align:left; padding:8px;">Publicado</th>
+                                        <th style="text-align:right; padding:8px;">Alcance</th>
+                                        <th style="text-align:right; padding:8px;">Views</th>
+                                        <th style="text-align:right; padding:8px;">Curtidas</th>
+                                        <th style="text-align:right; padding:8px;">Coment.</th>
+                                        <th style="text-align:right; padding:8px;">Compart.</th>
+                                        <th style="text-align:left; padding:8px;">Coleta</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($publicacoesMetricas as $pm): ?>
+                                        <?php $temMetrica = !empty($pm['data_coleta']); ?>
+                                        <tr>
+                                            <td style="padding:8px;"><?php echo htmlspecialchars(ucfirst((string)$pm['rede'])); ?></td>
+                                            <td style="padding:8px;">
+                                                <?php if (!empty($pm['slug'])): ?>
+                                                    <a href="../artigo.php?slug=<?php echo urlencode($pm['slug']); ?>" target="_blank"><?php echo htmlspecialchars($pm['titulo'] ?? ('#' . $pm['artigo_id'])); ?></a>
+                                                <?php else: ?>
+                                                    <?php echo htmlspecialchars($pm['titulo'] ?? ('#' . $pm['artigo_id'])); ?>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td style="padding:8px;"><?php echo $pm['publicado_em'] ? htmlspecialchars(formatDate($pm['publicado_em'], 'd/m/Y H:i')) : '-'; ?></td>
+                                            <td style="padding:8px; text-align:right;"><?php echo $temMetrica ? number_format((int)$pm['alcance']) : '-'; ?></td>
+                                            <td style="padding:8px; text-align:right;"><?php echo $temMetrica ? number_format((int)$pm['visualizacoes']) : '-'; ?></td>
+                                            <td style="padding:8px; text-align:right;"><?php echo $temMetrica ? number_format((int)$pm['curtidas']) : '-'; ?></td>
+                                            <td style="padding:8px; text-align:right;"><?php echo $temMetrica ? number_format((int)$pm['comentarios']) : '-'; ?></td>
+                                            <td style="padding:8px; text-align:right;"><?php echo $temMetrica ? number_format((int)$pm['compartilhamentos']) : '-'; ?></td>
+                                            <td style="padding:8px;"><?php echo $temMetrica ? htmlspecialchars(formatDate($pm['data_coleta'], 'd/m/Y H:i')) : 'sem coleta'; ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <p class="text-muted">Nenhuma publicação encontrada.</p>
                     <?php endif; ?>
                 </div>
             </div>

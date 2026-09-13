@@ -155,9 +155,11 @@ As units/timers de exemplo estão em `scripts/systemd/`. Instale como serviço d
 ```bash
 sudo cp scripts/systemd/washiviana-articles-publish.* /etc/systemd/system/
 sudo cp scripts/systemd/washiviana-social-publish.* /etc/systemd/system/
+sudo cp scripts/systemd/washiviana-metrics.* /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now washiviana-articles-publish.timer
 sudo systemctl enable --now washiviana-social-publish.timer
+sudo systemctl enable --now washiviana-metrics.timer
 ```
 
 Os arquivos assumem path `/home/washi/washiviana-site` e usuário `washi` — ajuste `User` e `WorkingDirectory` se o seu ambiente for diferente.
@@ -170,12 +172,21 @@ O `video_worker.php` também pode rodar por timer/cron. Ele:
 - notifica falhas por e-mail (`notify_email`) e, se configurado, no Sentry;
 - requer `ffmpeg` no `PATH` (valida antes de processar).
 
+### Métricas sociais
+
+O `metrics_worker.php` coleta métricas (curtidas/comentários/alcance) das publicações e grava snapshots em `metricas_publicacoes`. Roda por timer a cada 6h. Requer token válido e permissões de insights de cada rede; falhas são registradas sem interromper o worker.
+
+```bash
+php scripts/metrics_worker.php --rede=linkedin --limit=20   # execução manual
+```
+
 ### Alternativa via cron
 
 ```cron
 * * * * * /usr/bin/php /var/www/washiviana.com/scripts/worker_publish_articles.php
 * * * * * /usr/bin/php /var/www/washiviana.com/scripts/worker_publish_scheduled.php
 * * * * * /usr/bin/php /var/www/washiviana.com/scripts/video_worker.php
+0 */6 * * * /usr/bin/php /var/www/washiviana.com/scripts/metrics_worker.php
 ```
 
 Verificações úteis:

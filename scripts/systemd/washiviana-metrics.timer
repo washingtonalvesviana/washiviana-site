@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Washiviana social metrics collector every 6 hours
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=6h
+Persistent=true
+Unit=washiviana-metrics.service
+
+[Install]
+WantedBy=timers.target
