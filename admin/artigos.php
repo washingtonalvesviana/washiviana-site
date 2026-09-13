@@ -49,6 +49,7 @@ if ($action === 'edit' && $id) {
 $artigos = [];
 $artigosI18nMap = []; // [artigo_id][lang] => status_traducao
 $artigosMissing = ['pt' => [], 'en' => [], 'es' => []];
+$bulkI18nQueue = [];
 if ($action === 'list') {
     $sql = "SELECT a.*, ca.nome as categoria_nome 
             FROM artigos a 
@@ -91,6 +92,25 @@ if ($action === 'list') {
         if (empty($st['pt'])) $artigosMissing['pt'][] = (int)$a['id'];
         if (empty($st['en'])) $artigosMissing['en'][] = (int)$a['id'];
         if (empty($st['es'])) $artigosMissing['es'][] = (int)$a['id'];
+    }
+
+    // Fila para gerar traduções em lote (um artigo por vez), com os idiomas faltantes de cada um
+    $titulosPorId = [];
+    foreach ($artigos as $a) {
+        $titulosPorId[(int)$a['id']] = (string)($a['titulo'] ?? '');
+    }
+    $missingPorArtigo = [];
+    foreach (['pt', 'en', 'es'] as $lang) {
+        foreach ($artigosMissing[$lang] as $aid) {
+            $missingPorArtigo[(int)$aid][] = $lang;
+        }
+    }
+    foreach ($missingPorArtigo as $aid => $langs) {
+        $bulkI18nQueue[] = [
+            'id' => (int)$aid,
+            'titulo' => $titulosPorId[$aid] ?? ('#' . $aid),
+            'langs' => array_values($langs),
+        ];
     }
 }
 
@@ -290,6 +310,100 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                     </div>
                 </div>
                 
+                <?php
+                    // Ações da listagem (excluir e gerar traduções em lote) precisam de CSRF e da fila
+                    // de traduções faltantes. O formulário possui o seu próprio script de ações.
+                    $bulkI18nJson = json_encode(
+                        $bulkI18nQueue,
+                        JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+                    );
+                ?>
+                <input type="hidden" id="csrfToken" value="<?php echo htmlspecialchars(generateCsrfToken()); ?>">
+                <script>
+                    window.bulkI18nQueue = <?php echo $bulkI18nJson !== false ? $bulkI18nJson : '[]'; ?>;
+
+                    function listagemCsrfToken() {
+                        var el = document.getElementById('csrfToken')
+                            || document.querySelector('#artigoForm input[name="csrf_token"]')
+                            || document.querySelector('input[name="csrf_token"]');
+                        return el ? (el.value || '') : '';
+                    }
+
+                    function deletarArtigo(id) {
+                        if (!confirm('Tem certeza que deseja excluir este conteúdo?')) return;
+                        var csrf = listagemCsrfToken();
+                        if (!csrf) { alert('CSRF inválido. Recarregue a página.'); return; }
+                        var fd = new FormData();
+                        fd.append('action', 'delete');
+                        fd.append('id', String(id));
+                        fd.append('csrf_token', csrf);
+                        fetch('../api/artigos.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+                            .then(function(response) {
+                                return response.json().then(function(data) {
+                                    if (!response.ok || !data.success) throw new Error(data.message || 'Erro ao excluir.');
+                                    return data;
+                                });
+                            })
+                            .then(function() { window.location.href = 'artigos.php'; })
+                            .catch(function(err) { alert('❌ ' + err.message); });
+                    }
+
+                    function postI18nSeoListagem(id, langs, timeoutMs) {
+                        var csrf = listagemCsrfToken();
+                        var fd = new FormData();
+                        fd.append('csrf_token', csrf);
+                        fd.append('entity', 'artigo');
+                        fd.append('id', String(id));
+                        (langs || []).forEach(function(lang) { fd.append('langs[]', lang); });
+
+                        var controller = new AbortController();
+                        var timer = setTimeout(function() { controller.abort(); }, timeoutMs || 180000);
+                        return fetch('../api/i18n_seo.php', { method: 'POST', body: fd, credentials: 'same-origin', signal: controller.signal })
+                            .finally(function() { clearTimeout(timer); })
+                            .then(function(response) {
+                                return response.text().then(function(text) {
+                                    var data;
+                                    try { data = JSON.parse(text); } catch (e) { throw new Error('Resposta inválida do servidor.'); }
+                                    if (!response.ok || !data.success) throw new Error(data.message || ('Erro HTTP ' + response.status));
+                                    return data;
+                                });
+                            });
+                    }
+
+                    async function gerarI18nSeoBulkArtigos() {
+                        var fila = Array.isArray(window.bulkI18nQueue) ? window.bulkI18nQueue : [];
+                        if (!fila.length) { alert('Nenhuma tradução pendente.'); return; }
+                        var total = fila.length;
+                        if (!confirm('Gerar traduções para ' + total + ' conteúdo(s)? O processamento é sequencial e pode demorar.')) return;
+
+                        var btn = document.getElementById('btnBulkI18nArtigos');
+                        var originalHtml = btn ? btn.innerHTML : '';
+                        if (btn) btn.disabled = true;
+
+                        var ok = 0;
+                        var falhas = [];
+                        for (var i = 0; i < total; i++) {
+                            var item = fila[i];
+                            if (btn) btn.innerHTML = '<i class="ph ph-spinner"></i> ' + (i + 1) + '/' + total + ' — gerando...';
+                            try {
+                                await postI18nSeoListagem(item.id, item.langs, 180000);
+                                ok++;
+                            } catch (err) {
+                                falhas.push('#' + item.id + ' ' + (item.titulo || '') + ': ' + (err && err.message ? err.message : 'erro'));
+                            }
+                        }
+
+                        if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
+
+                        var msg = 'Traduções concluídas: ' + ok + ' de ' + total + '.';
+                        if (falhas.length) {
+                            msg += '\n\nFalhas (' + falhas.length + '):\n' + falhas.slice(0, 10).join('\n') + (falhas.length > 10 ? '\n...' : '');
+                        }
+                        alert(msg);
+                        if (ok > 0) window.location.reload();
+                    }
+                </script>
+
 <?php else: ?>
                 <!-- FORMULÁRIO DE CRIAÇÃO/EDIÇÃO -->
                 <div class="page-header">
