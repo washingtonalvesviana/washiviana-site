@@ -131,31 +131,43 @@ $seoDescription = !empty($projeto['meta_description'])
 $ogTitle = !empty($projeto['og_title']) ? $projeto['og_title'] : $seoTitle;
 $ogDescription = !empty($projeto['og_description']) ? $projeto['og_description'] : $seoDescription;
 
-// Processar galeria
-$galeria = json_decode($projeto['imagens_galeria'], true) ?: [];
+// Processar midia com validacao de existencia em uploads
+$imagemPrincipalFile = $projeto['imagem_principal'] ?? null;
+$imagemPrincipalUrl = uploadFileUrl($imagemPrincipalFile);
+
+$galeriaRaw = json_decode($projeto['imagens_galeria'], true) ?: [];
 $galeriaImagens = [];
 $galeriaVideos = [];
-foreach ($galeria as $item) {
+foreach ($galeriaRaw as $item) {
+    $mediaUrl = uploadFileUrl($item);
+    if (!$mediaUrl) {
+        continue;
+    }
+
     if (isVideoFilename($item)) {
-        $galeriaVideos[] = $item;
+        $galeriaVideos[] = [
+            'file' => $item,
+            'url' => $mediaUrl,
+        ];
     } else {
-        $galeriaImagens[] = $item;
+        $galeriaImagens[] = [
+            'file' => $item,
+            'url' => $mediaUrl,
+        ];
     }
 }
+$galeriaMediaTotal = count($galeriaImagens) + count($galeriaVideos);
 
 $shareImageFile = null;
-if (!empty($projeto['imagem_principal']) && !isVideoFilename($projeto['imagem_principal'])) {
-    $shareImageFile = $projeto['imagem_principal'];
-} elseif (!empty($galeria)) {
-    foreach ($galeria as $img) {
-        if (!empty($img) && !isVideoFilename($img)) {
-            $shareImageFile = $img;
-            break;
-        }
-    }
+$shareImageUrl = null;
+if (!empty($imagemPrincipalFile) && !isVideoFilename($imagemPrincipalFile) && $imagemPrincipalUrl) {
+    $shareImageFile = normalizeUploadFilename($imagemPrincipalFile);
+    $shareImageUrl = $imagemPrincipalUrl;
+} elseif (!empty($galeriaImagens)) {
+    $shareImageFile = normalizeUploadFilename($galeriaImagens[0]['file']);
+    $shareImageUrl = $galeriaImagens[0]['url'];
 }
-$shareImageUrl = $shareImageFile ? (UPLOAD_URL . $shareImageFile) : null;
-$shareImagePath = $shareImageFile ? (UPLOAD_DIR . $shareImageFile) : null;
+$shareImagePath = $shareImageFile ? uploadFilePath($shareImageFile) : null;
 $shareImageWidth = 1200;
 $shareImageHeight = 630;
 if ($shareImagePath && is_file($shareImagePath)) {
@@ -364,17 +376,17 @@ if (!$schemaData) {
                         <!-- ========================================
                              IMAGEM PRINCIPAL
                         ========================================= -->
-	                        <?php if ($projeto['imagem_principal']): ?>
+                            <?php if (!empty($imagemPrincipalFile) && $imagemPrincipalUrl): ?>
 	                        <section class="w-full rounded-xl overflow-hidden shadow-lg">
-	                            <?php if (isVideoFilename($projeto['imagem_principal'])): ?>
+                                <?php if (isVideoFilename($imagemPrincipalFile)): ?>
 	                                <video
-	                                    src="<?php echo UPLOAD_URL . $projeto['imagem_principal']; ?>"
+                                        src="<?php echo htmlspecialchars($imagemPrincipalUrl); ?>"
 	                                    controls
 	                                    playsinline
 	                                    preload="metadata"
 	                                    class="w-full h-auto max-h-[500px] object-cover"></video>
 	                            <?php else: ?>
-	                                <img src="<?php echo UPLOAD_URL . $projeto['imagem_principal']; ?>" 
+                                    <img src="<?php echo htmlspecialchars($imagemPrincipalUrl); ?>" 
 	                                     alt="<?php echo htmlspecialchars($projeto['titulo']); ?>"
 	                                     class="w-full h-auto max-h-[500px] object-cover">
 	                            <?php endif; ?>
@@ -449,7 +461,7 @@ if (!$schemaData) {
                             <?php endif; ?>
                             
                             <!-- Galeria -->
-                            <?php if (!empty($galeria)): ?>
+                            <?php if (!empty($galeriaImagens) || !empty($galeriaVideos)): ?>
                             <?php $mediaIndex = 0; ?>
                             <div class="mt-10">
                                 <?php if (!empty($galeriaImagens)): ?>
@@ -458,14 +470,14 @@ if (!$schemaData) {
                                     <?php echo htmlspecialchars(t('gallery.title', 'Galeria')); ?>
                                 </h2>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-                                    <?php foreach ($galeriaImagens as $img): ?>
+                                        <?php foreach ($galeriaImagens as $img): ?>
                                     <button type="button"
                                             data-gallery-item="1"
                                             data-gallery-index="<?php echo (int)$mediaIndex; ?>"
-                                            data-gallery-src="<?php echo htmlspecialchars(UPLOAD_URL . $img); ?>"
+                                            data-gallery-src="<?php echo htmlspecialchars($img['url']); ?>"
                                             data-gallery-type="image"
                                             class="block aspect-video rounded-lg overflow-hidden bg-neutral-100 hover:shadow-lg transition-shadow group focus:outline-none focus:ring-2 focus:ring-primary/40">
-                                        <img src="<?php echo UPLOAD_URL . $img; ?>" 
+                    	                                        <img src="<?php echo htmlspecialchars($img['url']); ?>" 
                                              alt="<?php echo htmlspecialchars(t('gallery.image_alt', 'Galeria')); ?>" 
                                              loading="lazy"
                                              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
@@ -481,15 +493,15 @@ if (!$schemaData) {
                                     <?php echo htmlspecialchars(t('gallery.videos', 'Vídeos')); ?>
                                 </h2>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    <?php foreach ($galeriaVideos as $vid): ?>
+                                        <?php foreach ($galeriaVideos as $vid): ?>
                                     <button type="button"
                                             data-gallery-item="1"
                                             data-gallery-index="<?php echo (int)$mediaIndex; ?>"
-                                            data-gallery-src="<?php echo htmlspecialchars(UPLOAD_URL . $vid); ?>"
+                                            data-gallery-src="<?php echo htmlspecialchars($vid['url']); ?>"
                                             data-gallery-type="video"
                                             class="block aspect-video rounded-lg overflow-hidden bg-neutral-100 hover:shadow-lg transition-shadow group focus:outline-none focus:ring-2 focus:ring-primary/40">
                                         <video
-                                            src="<?php echo UPLOAD_URL . $vid; ?>"
+                    	                                            src="<?php echo htmlspecialchars($vid['url']); ?>"
                                             class="w-full h-full object-cover"
                                             preload="metadata"
                                             muted
@@ -541,7 +553,7 @@ if (!$schemaData) {
         </div>
     </div>
     
-    <?php if (!empty($galeria)): ?>
+    <?php if ($galeriaMediaTotal > 0): ?>
     <!-- Modal da Galeria (carrossel) -->
     <div id="galleryModal"
          class="fixed inset-0 z-[100] hidden"
@@ -558,7 +570,7 @@ if (!$schemaData) {
                 <!-- Top bar -->
                 <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10">
                     <div class="text-white/90 text-sm font-medium">
-                        <span id="galleryCounter">1 / <?php echo (int)count($galeria); ?></span>
+                        <span id="galleryCounter">1 / <?php echo (int)$galeriaMediaTotal; ?></span>
                     </div>
                     <div class="flex items-center gap-2">
                         <a id="galleryOpenNewTab"
@@ -637,7 +649,7 @@ if (!$schemaData) {
             });
         }
 
-        <?php if (!empty($galeria)): ?>
+        <?php if ($galeriaMediaTotal > 0): ?>
         // Galeria: modal + carrossel
         (function () {
             const modal = document.getElementById('galleryModal');

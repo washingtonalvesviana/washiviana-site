@@ -197,15 +197,13 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                                     <?php foreach ($artigos as $art): 
                                         $statusPub = $art['status_publicacao'] ?? 'rascunho';
                                         $redesDestino = json_decode($art['redes_destino'] ?? '[]', true);
+                                        $thumbUrl = uploadFileUrl($art['imagem_1x1'] ?? null)
+                                            ?: uploadFileUrl($art['imagem_principal'] ?? null);
                                     ?>
                                         <tr>
                                             <td>
-                                                <?php if ($art['imagem_1x1']): ?>
-                                                    <img src="<?php echo UPLOAD_URL . $art['imagem_1x1']; ?>" 
-                                                         alt="<?php echo htmlspecialchars($art['titulo']); ?>" 
-                                                         class="table-thumb">
-                                                <?php elseif ($art['imagem_principal']): ?>
-                                                    <img src="<?php echo UPLOAD_URL . $art['imagem_principal']; ?>" 
+                                                <?php if ($thumbUrl): ?>
+                                                    <img src="<?php echo htmlspecialchars($thumbUrl); ?>" 
                                                          alt="<?php echo htmlspecialchars($art['titulo']); ?>" 
                                                          class="table-thumb">
                                                 <?php elseif ($art['tipo_midia'] === 'video'): ?>
@@ -301,9 +299,10 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                 
                 <div id="messageDiv" class="message" style="display: none;"></div>
                 
-                <form id="artigoForm" enctype="multipart/form-data">
+                <form id="artigoForm" method="post" action="../api/artigos.php" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                     <input type="hidden" name="id" value="<?php echo $artigo['id'] ?? ''; ?>">
+                    <input type="hidden" name="action" value="<?php echo !empty($artigo['id']) ? 'update' : 'create'; ?>">
                     
                     <!-- Abas de Navegação -->
                     <div class="form-tabs">
@@ -356,10 +355,11 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                                     <span id="btnGerarImagemLoader" style="display:none;">Gerando...</span>
                                 </button>
                                 
-                                <div class="image-preview-container" id="imagePreviewContainer" style="<?php echo ($artigo && $artigo['imagem_1x1']) ? '' : 'display:none;'; ?>">
+                                <?php $imagemIaUrl = uploadFileUrl($artigo['imagem_1x1'] ?? null); ?>
+                                <div class="image-preview-container" id="imagePreviewContainer" style="<?php echo $imagemIaUrl ? '' : 'display:none;'; ?>">
                                     <div class="image-preview-box">
-                                        <?php if ($artigo['imagem_1x1'] ?? false): ?>
-                                            <img src="<?php echo UPLOAD_URL . $artigo['imagem_1x1']; ?>" alt="Imagem do post" id="preview-imagem-ia">
+                                        <?php if ($imagemIaUrl): ?>
+                                            <img src="<?php echo htmlspecialchars($imagemIaUrl); ?>" alt="Imagem do post" id="preview-imagem-ia">
                                         <?php else: ?>
                                             <span class="placeholder" id="preview-imagem-ia"><i class="ph ph-image"></i></span>
                                         <?php endif; ?>
@@ -435,13 +435,16 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                         <div class="card" style="margin-top:16px;">
                             <div class="card-header"><h3>Upload de Mídia</h3></div>
                             <div class="card-body">
-                                <?php $imagemAtual = (!empty($artigo['imagem_principal'])) ? $artigo['imagem_principal'] : ($artigo['imagem_1x1'] ?? ''); ?>
+                                <?php
+                                    $imagemAtual = (!empty($artigo['imagem_principal'])) ? $artigo['imagem_principal'] : ($artigo['imagem_1x1'] ?? '');
+                                    $imagemAtualUrl = uploadFileUrl($imagemAtual);
+                                ?>
                                 <div id="upload-imagem" style="<?php echo ($artigo['tipo_midia'] ?? 'imagem') === 'video' ? 'display:none;' : ''; ?>">
                                     <div class="form-group">
                                         <label>Imagem</label>
                                         <div class="media-upload-area" onclick="document.getElementById('imagem_principal').click()">
-                                            <?php if ($imagemAtual): ?>
-                                                <img src="<?php echo UPLOAD_URL . $imagemAtual; ?>" class="media-preview" style="display:block; max-width:100%;">
+                                            <?php if ($imagemAtualUrl): ?>
+                                                <img src="<?php echo htmlspecialchars($imagemAtualUrl); ?>" class="media-preview" style="display:block; max-width:100%;">
                                                 <small>Clique para substituir</small>
                                             <?php else: ?>
                                                 <div><i class="ph ph-camera"></i> Clique para selecionar</div>
@@ -675,16 +678,326 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
                 </style>
                 
+                <script src="../assets/js/admin.js?v=<?php echo time(); ?>"></script>
                 <script>
                 document.querySelectorAll('.form-tab').forEach(function(btn) {
                     btn.addEventListener('click', function() {
                         document.querySelectorAll('.form-tab').forEach(function(b) { b.classList.remove('active'); });
                         document.querySelectorAll('.form-tab-content').forEach(function(c) { c.classList.remove('active'); });
                         btn.classList.add('active');
-                        document.getElementById(btn.dataset.tab).classList.add('active');
+                        var target = document.getElementById(btn.dataset.tab);
+                        if (target) target.classList.add('active');
                     });
                 });
-</script>
+
+                function parseApiJsonResponse(response) {
+                    return response.text().then(function(text) {
+                        var data;
+                        try {
+                            data = JSON.parse(text);
+                        } catch (e) {
+                            throw new Error('Resposta inválida do servidor.');
+                        }
+                        if (!response.ok) {
+                            throw new Error(data.message || ('Erro HTTP ' + response.status));
+                        }
+                        return data;
+                    });
+                }
+
+                function selecionarTipoMidia(tipo) {
+                    document.getElementById('tipo_midia').value = tipo;
+                    document.querySelectorAll('.media-type-option').forEach(function(el) { el.classList.remove('active'); });
+                    var options = document.querySelectorAll('.media-type-option');
+                    if (tipo === 'imagem' && options[0]) options[0].classList.add('active');
+                    if (tipo === 'video' && options[1]) options[1].classList.add('active');
+
+                    var uploadImagem = document.getElementById('upload-imagem');
+                    var uploadVideo = document.getElementById('upload-video');
+                    if (uploadImagem) uploadImagem.style.display = (tipo === 'imagem') ? '' : 'none';
+                    if (uploadVideo) uploadVideo.style.display = (tipo === 'video') ? '' : 'none';
+                }
+
+                function selecionarStatus(status) {
+                    document.getElementById('status_publicacao').value = status;
+                    document.querySelectorAll('.status-option').forEach(function(el) { el.classList.remove('active'); });
+                    var selected = document.querySelector('.status-option.' + status);
+                    if (selected) selected.classList.add('active');
+
+                    var scheduling = document.getElementById('schedulingSection');
+                    if (scheduling) scheduling.style.display = (status === 'agendado') ? '' : 'none';
+                }
+
+                function toggleRecorrencia() {
+                    // Mantido por compatibilidade de UI.
+                }
+
+                function previewMedia(input, tipo) {
+                    if (!input || !input.files || !input.files[0]) return;
+                    var file = input.files[0];
+                    var area = input.closest('.form-group') ? input.closest('.form-group').querySelector('.media-upload-area') : null;
+                    if (!area) return;
+
+                    if (tipo === 'imagem' && file.type.indexOf('image/') === 0) {
+                        var reader = new FileReader();
+                        reader.onload = function(e) {
+                            area.innerHTML = '<img src="' + e.target.result + '" class="media-preview" style="display:block; max-width:100%;"><small>Clique para substituir</small>';
+                        };
+                        reader.readAsDataURL(file);
+                    } else if (tipo === 'video' && file.type.indexOf('video/') === 0) {
+                        area.innerHTML = '<div><i class="ph ph-film-strip"></i> ' + file.name + '</div><small>Vídeo selecionado</small>';
+                    }
+                }
+
+                function atualizarRedesDestino() {
+                    var checks = document.querySelectorAll('input[name="redes_check[]"]:checked');
+                    var redes = [];
+                    checks.forEach(function(chk) {
+                        redes.push({ rede: chk.value, formato: '1:1' });
+                    });
+                    var hidden = document.getElementById('redes_destino');
+                    if (hidden) hidden.value = JSON.stringify(redes);
+                }
+
+                function gerarSlug() {
+                    var titulo = document.getElementById('titulo');
+                    var slug = document.getElementById('slug');
+                    if (!titulo || !slug || slug.dataset.touched === '1') return;
+                    var s = (titulo.value || '')
+                        .toLowerCase()
+                        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                        .replace(/[^a-z0-9\s-]/g, '')
+                        .trim()
+                        .replace(/\s+/g, '-')
+                        .replace(/-+/g, '-');
+                    slug.value = s;
+                }
+
+                (function() {
+                    var slug = document.getElementById('slug');
+                    if (slug) {
+                        slug.addEventListener('input', function() { slug.dataset.touched = '1'; });
+                    }
+                    atualizarRedesDestino();
+                })();
+
+                document.getElementById('artigoForm')?.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    var form = this;
+                    var formData = new FormData(form);
+                    formData.set('action', formData.get('id') ? 'update' : 'create');
+
+                    var btnSaveText = document.getElementById('btnSaveText');
+                    var btnSaveLoader = document.getElementById('btnSaveLoader');
+                    var messageDiv = document.getElementById('messageDiv');
+
+                    if (btnSaveText) btnSaveText.style.display = 'none';
+                    if (btnSaveLoader) btnSaveLoader.style.display = 'inline';
+
+                    fetch('../api/artigos.php', {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'same-origin'
+                    })
+                    .then(parseApiJsonResponse)
+                    .then(function(data) {
+                        messageDiv.style.display = 'block';
+                        if (data.success) {
+                            messageDiv.className = 'message message-success';
+                            messageDiv.textContent = '✅ ' + (data.message || 'Conteúdo salvo com sucesso.');
+                            if (data.artigo_id && !formData.get('id')) {
+                                setTimeout(function() {
+                                    window.location.href = '?action=edit&id=' + encodeURIComponent(data.artigo_id);
+                                }, 700);
+                            }
+                        } else {
+                            messageDiv.className = 'message message-error';
+                            messageDiv.textContent = '❌ ' + (data.message || 'Falha ao salvar conteúdo.');
+                        }
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    })
+                    .catch(function(error) {
+                        messageDiv.style.display = 'block';
+                        messageDiv.className = 'message message-error';
+                        messageDiv.textContent = '❌ Erro de conexão: ' + error.message;
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    })
+                    .finally(function() {
+                        if (btnSaveText) btnSaveText.style.display = 'inline';
+                        if (btnSaveLoader) btnSaveLoader.style.display = 'none';
+                    });
+                });
+
+                function deletarArtigo(id) {
+                    if (!confirm('Tem certeza que deseja excluir este conteúdo?')) return;
+                    var csrf = document.querySelector('#artigoForm input[name="csrf_token"]')?.value
+                        || document.querySelector('input[name="csrf_token"]')?.value
+                        || '';
+                    if (!csrf) {
+                        alert('CSRF inválido. Recarregue a página.');
+                        return;
+                    }
+                    var fd = new FormData();
+                    fd.append('action', 'delete');
+                    fd.append('id', String(id));
+                    fd.append('csrf_token', csrf);
+                    fetch('../api/artigos.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+                        .then(parseApiJsonResponse)
+                        .then(function(data) {
+                            if (!data.success) throw new Error(data.message || 'Erro ao excluir.');
+                            window.location.href = 'artigos.php';
+                        })
+                        .catch(function(err) { alert(err.message); });
+                }
+
+                function publicarAgoraLinkedIn(artigoId) {
+                    var csrf = document.querySelector('#artigoForm input[name="csrf_token"]')?.value || '';
+                    if (!csrf) {
+                        alert('CSRF inválido. Recarregue a página.');
+                        return;
+                    }
+                    var fd = new FormData();
+                    fd.append('action', 'publish_now_linkedin');
+                    fd.append('id', String(artigoId));
+                    fd.append('csrf_token', csrf);
+                    fetch('../api/artigos.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+                        .then(parseApiJsonResponse)
+                        .then(function(data) {
+                            if (!data.success) throw new Error(data.message || 'Falha ao publicar no LinkedIn.');
+                            alert('✅ Publicação enviada ao LinkedIn.');
+                        })
+                        .catch(function(err) { alert('❌ ' + err.message); });
+                }
+
+                function gerarConteudoIA() {
+                    var prompt = (document.getElementById('prompt_texto')?.value || '').trim();
+                    if (!prompt) {
+                        alert('Preencha o prompt para gerar conteúdo.');
+                        return;
+                    }
+
+                    var fd = new FormData();
+                    fd.append('action', 'generate_article');
+                    fd.append('tema', prompt);
+                    var csrf = document.querySelector('#artigoForm input[name="csrf_token"]')?.value || '';
+                    if (csrf) fd.append('csrf_token', csrf);
+
+                    fetch('../api/gemini.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+                        .then(parseApiJsonResponse)
+                        .then(function(data) {
+                            if (!data.success) throw new Error(data.message || 'Falha ao gerar conteúdo.');
+
+                            var titulo = data.titulo || '';
+                            var resumo = data.resumo || '';
+                            var conteudo = data.conteudo || data.texto || '';
+
+                            if (titulo && document.getElementById('titulo')) document.getElementById('titulo').value = titulo;
+                            if (resumo && document.getElementById('resumo')) document.getElementById('resumo').value = resumo;
+                            if (conteudo && document.getElementById('conteudo')) document.getElementById('conteudo').value = conteudo;
+                            gerarSlug();
+                            alert('✅ Conteúdo gerado com sucesso.');
+                        })
+                        .catch(function(err) {
+                            alert('❌ ' + err.message);
+                        });
+                }
+
+                function gerarImagemIA() {
+                    var prompt = (document.getElementById('prompt_imagem')?.value || '').trim()
+                        || (document.getElementById('prompt_texto')?.value || '').trim()
+                        || (document.getElementById('titulo')?.value || '').trim();
+                    if (!prompt) {
+                        alert('Preencha um prompt para gerar imagem.');
+                        return;
+                    }
+
+                    var fd = new FormData();
+                    fd.append('action', 'generate_image');
+                    fd.append('prompt', prompt);
+                    var csrf = document.querySelector('#artigoForm input[name="csrf_token"]')?.value || '';
+                    if (csrf) fd.append('csrf_token', csrf);
+
+                    fetch('../api/gemini.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+                        .then(parseApiJsonResponse)
+                        .then(function(data) {
+                            if (!data.success) throw new Error(data.message || 'Falha ao gerar imagem.');
+                            var url = data.url || data.image_url || '';
+                            if (!url) throw new Error('Resposta sem URL da imagem.');
+
+                            var container = document.getElementById('imagePreviewContainer');
+                            if (container) container.style.display = '';
+                            var preview = document.getElementById('preview-imagem-ia');
+                            if (preview && preview.tagName.toLowerCase() === 'img') {
+                                preview.src = url;
+                            } else {
+                                var box = container ? container.querySelector('.image-preview-box') : null;
+                                if (box) box.innerHTML = '<img src="' + url + '" alt="Imagem do post" id="preview-imagem-ia">';
+                            }
+                            if (data.filename && document.getElementById('imagem_1x1')) {
+                                document.getElementById('imagem_1x1').value = data.filename;
+                            }
+                            alert('✅ Imagem gerada com sucesso.');
+                        })
+                        .catch(function(err) {
+                            alert('❌ ' + err.message);
+                        });
+                }
+
+                function gerarI18nSeo(entity, id, langs) {
+                    var csrf = document.querySelector('#artigoForm input[name="csrf_token"]')?.value || '';
+                    var fd = new FormData();
+                    fd.append('csrf_token', csrf);
+                    fd.append('entity', entity);
+                    fd.append('id', String(id));
+                    (langs || []).forEach(function(lang) { fd.append('langs[]', lang); });
+
+                    fetch('../api/i18n_seo.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+                        .then(parseApiJsonResponse)
+                        .then(function(data) {
+                            if (!data.success) throw new Error(data.message || 'Falha ao gerar i18n/SEO.');
+                            alert('✅ i18n/SEO gerado com sucesso.');
+                            window.location.reload();
+                        })
+                        .catch(function(err) {
+                            alert('❌ ' + err.message);
+                        });
+                }
+
+                function marcarI18nRevisado(entity, id, lang) {
+                    var csrf = document.querySelector('#artigoForm input[name="csrf_token"]')?.value || '';
+                    var fd = new FormData();
+                    fd.append('csrf_token', csrf);
+                    fd.append('entity', entity);
+                    fd.append('id', String(id));
+                    fd.append('lang', lang);
+                    fd.append('status', 'reviewed');
+
+                    fetch('../api/i18n_status.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+                        .then(parseApiJsonResponse)
+                        .then(function(data) {
+                            if (!data.success) throw new Error(data.message || 'Falha ao atualizar status.');
+                            window.location.reload();
+                        })
+                        .catch(function(err) {
+                            alert('❌ ' + err.message);
+                        });
+                }
+
+                function verSeo(entity, id, lang) {
+                    fetch('../api/get_i18n_seo.php?entity=' + encodeURIComponent(entity) + '&id=' + encodeURIComponent(id) + '&lang=' + encodeURIComponent(lang), {
+                        credentials: 'same-origin'
+                    })
+                        .then(parseApiJsonResponse)
+                        .then(function(data) {
+                            if (!data.success) throw new Error(data.message || 'Falha ao carregar SEO.');
+                            alert('SEO ' + lang.toUpperCase() + '\n\n' + JSON.stringify(data.data || {}, null, 2));
+                        })
+                        .catch(function(err) {
+                            alert('❌ ' + err.message);
+                        });
+                }
+                </script>
             <?php endif; ?>
         </main>
     </div>

@@ -211,6 +211,60 @@ function clearConfigI18nCache(): void {
 }
 
 /**
+ * Normaliza nome de arquivo em uploads para evitar caminhos quebrados.
+ */
+function normalizeUploadFilename(?string $filename): ?string {
+    if ($filename === null) return null;
+    $filename = trim((string)$filename);
+    if ($filename === '') return null;
+    if (preg_match('~^https?://~i', $filename)) return $filename;
+
+    $filename = str_replace('\\', '/', $filename);
+    $filename = ltrim($filename, '/');
+    if (stripos($filename, 'uploads/') === 0) {
+        $filename = substr($filename, 8);
+    }
+
+    if ($filename === '' || strpos($filename, '..') !== false) {
+        return null;
+    }
+
+    return $filename;
+}
+
+/**
+ * Retorna caminho absoluto do arquivo local em uploads.
+ */
+function uploadFilePath(?string $filename): ?string {
+    $normalized = normalizeUploadFilename($filename);
+    if ($normalized === null) return null;
+    if (preg_match('~^https?://~i', $normalized)) return null;
+
+    return rtrim(UPLOAD_DIR, '/\\') . '/' . $normalized;
+}
+
+/**
+ * Verifica se o arquivo local realmente existe no diretório uploads.
+ */
+function uploadFileExists(?string $filename): bool {
+    $path = uploadFilePath($filename);
+    return $path ? is_file($path) : false;
+}
+
+/**
+ * Retorna URL pública do arquivo de upload somente quando existir.
+ */
+function uploadFileUrl(?string $filename): ?string {
+    $normalized = normalizeUploadFilename($filename);
+    if ($normalized === null) return null;
+    if (preg_match('~^https?://~i', $normalized)) return $normalized;
+    if (!uploadFileExists($normalized)) return null;
+
+    $segments = array_map('rawurlencode', explode('/', $normalized));
+    return rtrim(UPLOAD_URL, '/') . '/' . implode('/', $segments);
+}
+
+/**
  * Enviar email simples usando mail() (fallback logs). Retorna true se enviado.
  */
 function sendNotificationEmail(string $subject, string $body): bool {

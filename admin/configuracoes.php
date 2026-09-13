@@ -539,6 +539,15 @@ try {
 
     <script src="../assets/js/admin.js?v=<?php echo time(); ?>"></script>
     <script>
+        function fetchWithTimeout(url, options, timeout) {
+            timeout = typeof timeout === 'number' ? timeout : 30000;
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            const opts = Object.assign({}, options, { signal: controller.signal });
+            return fetch(url, opts)
+                .finally(() => clearTimeout(id));
+        }
+
         // Função de salvamento
         function salvarConfiguracoesManual() {
             var form = document.getElementById('configForm');
@@ -546,19 +555,34 @@ try {
             var messageDiv = document.getElementById('messageDiv');
             var btnSaveText = document.getElementById('btnSaveText');
             var btnSaveLoader = document.getElementById('btnSaveLoader');
-            
+            var saveButton = btnSaveText.closest('button');
+
+            if (saveButton) {
+                saveButton.disabled = true;
+            }
             btnSaveText.style.display = 'none';
             btnSaveLoader.style.display = 'inline';
-            
-            fetch('../api/configuracoes.php', {
+            messageDiv.style.display = 'none';
+
+            fetchWithTimeout('../api/configuracoes.php', {
                 method: 'POST',
                 body: formData
+            }, 30000)
+            .then(function(response) {
+                if (!response.ok) {
+                    return response.text().then(function(text) {
+                        throw new Error('HTTP ' + response.status + ': ' + (text || response.statusText));
+                    });
+                }
+                return response.json();
             })
-            .then(function(response) { return response.json(); })
             .then(function(data) {
                 btnSaveText.style.display = 'inline';
                 btnSaveLoader.style.display = 'none';
-                
+                if (saveButton) {
+                    saveButton.disabled = false;
+                }
+
                 messageDiv.style.display = 'block';
                 if (data.success) {
                     messageDiv.className = 'message message-success';
@@ -567,9 +591,9 @@ try {
                     messageDiv.className = 'message message-error';
                     messageDiv.textContent = '❌ ' + data.message;
                 }
-                
+
                 window.scrollTo({ top: 0, behavior: 'smooth' });
-                
+
                 // Ocultar mensagem após 5 segundos
                 setTimeout(function() {
                     messageDiv.style.display = 'none';
@@ -578,10 +602,17 @@ try {
             .catch(function(error) {
                 btnSaveText.style.display = 'inline';
                 btnSaveLoader.style.display = 'none';
-                
+                if (saveButton) {
+                    saveButton.disabled = false;
+                }
+
                 messageDiv.style.display = 'block';
                 messageDiv.className = 'message message-error';
-                messageDiv.textContent = '❌ Erro de conexão: ' + error.message;
+                if (error.name === 'AbortError') {
+                    messageDiv.textContent = '❌ Tempo de espera esgotado. O servidor demorou muito para responder.';
+                } else {
+                    messageDiv.textContent = '❌ Erro de conexão: ' + error.message;
+                }
             });
         }
 
@@ -618,7 +649,7 @@ try {
                 var formData = new FormData();
                 formData.append('csrf_token', csrf);
                 formData.append('langs[]', lang);
-                return fetch('../api/i18n_site.php', { method: 'POST', body: formData }).then(parseJsonResponseSafe);
+                return fetchWithTimeout('../api/i18n_site.php', { method: 'POST', body: formData }, 120000).then(parseJsonResponseSafe);
             }
 
             // Para evitar 504 (gateway timeout) quando pedir EN+ES juntos,

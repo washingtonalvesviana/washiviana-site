@@ -183,13 +183,13 @@ try {
 
 if ($tabelaArtigosExiste) {
     try {
-        // Busca os últimos 10 para saber se há mais de 9
+        // Busca os últimos 7 para saber se há mais de 6
         $stmt = $pdo->query("SELECT a.*, ca.nome as categoria_nome
                             FROM artigos a 
                             LEFT JOIN categorias_artigos ca ON a.categoria_id = ca.id
                             WHERE a.status_publicacao = 'publicado'
                             ORDER BY a.created_at DESC 
-                            LIMIT 10");
+                            LIMIT 7");
         $ultimosConteudos = $stmt->fetchAll();
     } catch (Exception $e) {
         $ultimosConteudos = [];
@@ -287,6 +287,67 @@ function routeFromConfigLink(string $link): string {
     
     <style>
         /* Phosphor Icons are loaded via JS, no extra CSS needed for basic usage */
+        .mini-bio-card {
+            height: 480px;
+            overflow: hidden;
+            position: relative;
+        }
+        .mini-bio-card h2 {
+            text-align: left;
+        }
+        .mini-bio-layout {
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr);
+            row-gap: 1.5rem;
+            height: 100%;
+            min-height: 0;
+        }
+        .mini-bio-scroll-wrap {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+            padding-bottom: 0.5rem;
+        }
+        .mini-bio-scroll {
+            height: 100%;
+            overflow-y: scroll;
+            text-align: justify;
+            padding-right: 0.75rem;
+            padding-bottom: 2.25rem;
+            line-height: 1.9;
+            position: relative;
+            scroll-behavior: smooth;
+            overscroll-behavior: contain;
+        }
+        .mini-bio-scroll-wrap::after {
+            content: '';
+            pointer-events: none;
+            position: absolute;
+            left: 0;
+            right: 0.75rem;
+            bottom: 0;
+            height: 4.5rem;
+            background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(249,250,251,0.88) 60%, rgba(249,250,251,1) 100%);
+        }
+        .mini-bio-scroll::-webkit-scrollbar {
+            width: 10px;
+        }
+        .mini-bio-scroll::-webkit-scrollbar-track {
+            background: rgba(148, 163, 184, 0.15);
+            border-radius: 9999px;
+        }
+        .mini-bio-scroll::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.6);
+            border-radius: 9999px;
+        }
+        .mini-bio-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(59, 130, 246, 0.8);
+        }
+        .mini-bio-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(59, 130, 246, 0.6) rgba(148, 163, 184, 0.15);
+        }
     </style>
 </head>
 <body class="font-display">
@@ -442,18 +503,27 @@ function routeFromConfigLink(string $link): string {
                             
                             <?php if (!empty($ultimosConteudos)): ?>
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
-                                <?php foreach (array_slice($ultimosConteudos, 0, 9) as $conteudo): ?>
+                                <?php foreach (array_slice($ultimosConteudos, 0, 6) as $conteudo): ?>
                                 <a href="<?php echo routeArtigo($conteudo['slug']); ?>" class="flex flex-col rounded-xl overflow-hidden bg-white border border-neutral-200 group hover:shadow-lg transition-all">
                                     <!-- Thumbnail -->
                                     <?php 
-                                    $imagem = $conteudo['imagem_1x1'] ?? $conteudo['imagem_principal'] ?? null;
-                                    $webpImagem = ensureUploadWebpVariant($imagem);
-                                    if ($imagem): ?>
+                                    $imagem = null;
+                                    $imagemUrl = uploadFileUrl($conteudo['imagem_1x1'] ?? null);
+                                    if ($imagemUrl) {
+                                        $imagem = $conteudo['imagem_1x1'] ?? null;
+                                    } else {
+                                        $imagemUrl = uploadFileUrl($conteudo['imagem_principal'] ?? null);
+                                        if ($imagemUrl) {
+                                            $imagem = $conteudo['imagem_principal'] ?? null;
+                                        }
+                                    }
+                                    $webpImagem = $imagemUrl && $imagem ? ensureUploadWebpVariant($imagem) : null;
+                                    if ($imagemUrl): ?>
                                     <div class="w-full aspect-video bg-cover bg-center bg-neutral-100" 
                                          style="<?php
-                                             $jpgUrl = UPLOAD_URL . $imagem;
-                                             if ($webpImagem) {
-                                                 $webpUrl = UPLOAD_URL . $webpImagem;
+                                             $jpgUrl = $imagemUrl;
+                                             $webpUrl = uploadFileUrl($webpImagem);
+                                             if ($webpUrl) {
                                                  echo htmlspecialchars("background-image: url('{$jpgUrl}'); background-image: image-set(url('{$webpUrl}') type('image/webp') 1x, url('{$jpgUrl}') 1x);");
                                              } else {
                                                  echo htmlspecialchars("background-image: url('{$jpgUrl}');");
@@ -507,19 +577,127 @@ function routeFromConfigLink(string $link): string {
                         <!-- ========================================
                              SEÇÃO SOBRE - Mini Bio
                         ========================================= -->
-                        <section class="bg-neutral-50 rounded-xl p-8 md:p-12 text-center border border-neutral-200">
-                            <div class="max-w-2xl mx-auto flex flex-col items-center gap-6">
-	                                <h2 class="text-neutral-800 text-2xl md:text-3xl font-bold leading-tight">
+                        <section class="mini-bio-card bg-neutral-50 rounded-xl p-8 md:p-12 border border-neutral-200">
+                            <div class="mini-bio-layout max-w-2xl mx-auto">
+	                                <h2 class="text-neutral-800 text-2xl md:text-3xl font-bold leading-tight shrink-0">
 	                                    <?php echo htmlspecialchars(t('home.about_title', 'Um pouco sobre mim')); ?>
 	                                </h2>
-                                <div class="text-neutral-600 text-base leading-relaxed space-y-4">
-	                                    <?php echo renderMiniBio(getConfigI18n('mini_bio') ?: $miniBio); ?>
-	                                </div>
-	                                <a href="<?php echo routeSobre(); ?>" class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-6 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-primary-dark transition-colors mt-2 shadow-md hover:shadow-lg">
-	                                    <span><?php echo htmlspecialchars(t('home.about_cta', 'Conheça minha trajetória')); ?></span>
-	                                </a>
+                                <div class="mini-bio-scroll-wrap">
+                                    <div class="mini-bio-scroll h-full text-neutral-600 text-base leading-relaxed space-y-4">
+	                                        <?php echo renderMiniBio(getConfigI18n('mini_bio') ?: $miniBio); ?>
+	                                    </div>
+                                </div>
                             </div>
                         </section>
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function () {
+                                var bio = document.querySelector('.mini-bio-scroll');
+                                if (!bio) return;
+
+                                var autoScrollEnabled = false;
+                                var isInView = false;
+                                var pixelsPerSecond = 8;
+                                var resetDelay = 1800;
+                                var userInteracted = false;
+                                var autoScrollFrame;
+                                var lastFrameTime = null;
+                                var visibilityObserver = null;
+
+                                if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                                    return;
+                                }
+
+                                function startAutoScroll() {
+                                    if (userInteracted || !isInView) return;
+                                    if (bio.scrollHeight <= bio.clientHeight) return;
+                                    if (autoScrollEnabled) return;
+                                    autoScrollEnabled = true;
+                                    lastFrameTime = null;
+                                    autoScrollFrame = requestAnimationFrame(autoScrollStep);
+                                }
+
+                                function pauseAutoScroll() {
+                                    autoScrollEnabled = false;
+                                    lastFrameTime = null;
+                                    if (autoScrollFrame) {
+                                        cancelAnimationFrame(autoScrollFrame);
+                                        autoScrollFrame = null;
+                                    }
+                                }
+
+                                function stopAutoScroll() {
+                                    if (!userInteracted) {
+                                        userInteracted = true;
+                                        pauseAutoScroll();
+                                        if (visibilityObserver) {
+                                            visibilityObserver.disconnect();
+                                            visibilityObserver = null;
+                                        }
+                                    }
+                                }
+
+                                ['wheel', 'touchstart', 'mousedown', 'keydown', 'pointerdown'].forEach(function(eventName) {
+                                    bio.addEventListener(eventName, function () {
+                                        stopAutoScroll();
+                                    }, { passive: true });
+                                });
+
+                                function autoScrollStep() {
+                                    if (!autoScrollEnabled || !isInView) return;
+                                    if (bio.scrollHeight <= bio.clientHeight) return;
+
+                                    if (lastFrameTime === null) {
+                                        lastFrameTime = performance.now();
+                                    }
+
+                                    var now = performance.now();
+                                    var deltaSeconds = (now - lastFrameTime) / 1000;
+                                    lastFrameTime = now;
+
+                                    var maxScroll = bio.scrollHeight - bio.clientHeight;
+                                    if (bio.scrollTop >= maxScroll - 1) {
+                                        setTimeout(function () {
+                                            if (!autoScrollEnabled || !isInView) return;
+                                            bio.scrollTop = 0;
+                                            lastFrameTime = null;
+                                            if (autoScrollEnabled && isInView) autoScrollFrame = requestAnimationFrame(autoScrollStep);
+                                        }, 1400);
+                                        return;
+                                    }
+
+                                    var increment = pixelsPerSecond * deltaSeconds;
+                                    bio.scrollTop = Math.min(maxScroll, bio.scrollTop + increment);
+                                    autoScrollFrame = requestAnimationFrame(autoScrollStep);
+                                }
+
+                                setTimeout(function () {
+                                    if (!userInteracted) {
+                                        var card = document.querySelector('.mini-bio-card');
+                                        if (!card || !('IntersectionObserver' in window)) {
+                                            isInView = true;
+                                            startAutoScroll();
+                                            return;
+                                        }
+
+                                        visibilityObserver = new IntersectionObserver(function (entries) {
+                                            entries.forEach(function (entry) {
+                                                if (entry.target !== card) return;
+                                                isInView = entry.isIntersecting && entry.intersectionRatio >= 0.35;
+                                                if (isInView) {
+                                                    startAutoScroll();
+                                                } else {
+                                                    pauseAutoScroll();
+                                                }
+                                            });
+                                        }, {
+                                            threshold: [0.35]
+                                        });
+
+                                        visibilityObserver.observe(card);
+                                    }
+                                }, resetDelay);
+                            });
+                        </script>
                         
 	                        <!-- ========================================
 	                             SOCIAL PROOF - "Já criei com/para"

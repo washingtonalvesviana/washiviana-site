@@ -309,10 +309,11 @@ if ($categoriaAtual) {
                                     
                                     <!-- Imagem de capa -->
                                     <?php 
-                                    $imagem = $artigo['imagem_1x1'] ?? $artigo['imagem_principal'] ?? null;
-                                    if ($imagem): ?>
+                                    $imagemUrl = uploadFileUrl($artigo['imagem_1x1'] ?? null)
+                                        ?: uploadFileUrl($artigo['imagem_principal'] ?? null);
+                                    if ($imagemUrl): ?>
                                     <div class="w-full aspect-video bg-cover bg-center bg-neutral-100 overflow-hidden">
-                                        <img src="<?php echo UPLOAD_URL . $imagem; ?>" 
+                                        <img src="<?php echo htmlspecialchars($imagemUrl); ?>" 
                                              alt="<?php echo htmlspecialchars($artigo['titulo']); ?>"
                                              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                              loading="lazy">

@@ -273,17 +273,20 @@ if ($categoriaAtual) {
                                    class="flex flex-col rounded-xl overflow-hidden bg-white border border-neutral-200 group hover:shadow-lg hover:border-primary/30 transition-all">
                                     
                                     <!-- Imagem -->
-	                                    <?php if ($projeto['imagem_principal']): ?>
+                                        <?php
+                                            $projetoCardMediaUrl = uploadFileUrl($projeto['imagem_principal'] ?? null);
+                                        ?>
+                                        <?php if (!empty($projeto['imagem_principal']) && $projetoCardMediaUrl): ?>
 	                                    <div class="w-full aspect-video bg-cover bg-center bg-neutral-100 overflow-hidden">
 	                                        <?php if (isVideoFilename($projeto['imagem_principal'])): ?>
 	                                            <video
-	                                                src="<?php echo UPLOAD_URL . $projeto['imagem_principal']; ?>"
+                                                    src="<?php echo htmlspecialchars($projetoCardMediaUrl); ?>"
 	                                                class="w-full h-full object-cover"
 	                                                preload="metadata"
 	                                                muted
 	                                                playsinline></video>
 	                                        <?php else: ?>
-	                                            <img src="<?php echo UPLOAD_URL . $projeto['imagem_principal']; ?>" 
+                                                <img src="<?php echo htmlspecialchars($projetoCardMediaUrl); ?>" 
 	                                                 alt="<?php echo htmlspecialchars($projeto['titulo']); ?>" 
 	                                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
 	                                                 loading="lazy">

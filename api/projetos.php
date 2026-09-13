@@ -288,6 +288,7 @@ function criarProjeto() {
                 }
             }
         }
+        $imagensGaleria = array_values(array_unique($imagensGaleria));
         
         // Inserir projeto
         $stmt = $pdo->prepare("INSERT INTO projetos 
@@ -437,6 +438,7 @@ function atualizarProjeto() {
                 }
             }
         }
+        $imagensGaleria = array_values(array_unique($imagensGaleria));
         
         // Atualizar projeto
         $promptDescricao = $_POST['prompt_descricao'] ?? $projetoAtual['prompt_descricao'] ?? null;

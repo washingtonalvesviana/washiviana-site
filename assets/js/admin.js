@@ -2,6 +2,8 @@
  * WASHIVIANA PORTFOLIO - Admin JavaScript
  */
 
+let projetoSaveInProgress = false;
+
 // Toggle Mobile Menu
 function toggleMobileMenu() {
     const sidebar = document.getElementById('admin-sidebar');
@@ -1524,6 +1526,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // Salvar projeto
 function salvarProjeto() {
+    if (projetoSaveInProgress) {
+        return;
+    }
+    projetoSaveInProgress = true;
     const form = document.getElementById('projetoForm');
     const formData = new FormData(form);
     formData.append('action', formData.get('id') ? 'update' : 'create');
@@ -1549,7 +1555,9 @@ function salvarProjeto() {
     const btnText = document.getElementById('btnSaveText');
     const btnLoader = document.getElementById('btnSaveLoader');
     const messageDiv = document.getElementById('messageDiv');
+    const submitButtons = form.querySelectorAll('button[type="submit"]');
 
+    submitButtons.forEach(btn => btn.disabled = true);
     btnText.style.display = 'none';
     btnLoader.style.display = 'inline';
 
@@ -1612,6 +1620,10 @@ function salvarProjeto() {
             messageDiv.style.display = 'block';
             messageDiv.className = 'message message-error';
             messageDiv.textContent = '❌ Erro de conexão: ' + error.message;
+        })
+        .finally(() => {
+            projetoSaveInProgress = false;
+            submitButtons.forEach(btn => btn.disabled = false);
         });
 }
 

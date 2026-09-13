@@ -148,13 +148,18 @@ try {
                                         <?php foreach ($ultimosProjetos as $projeto): ?>
                                             <tr>
                                                 <td>
+                                                    <?php
+                                                        $projetoThumbUrl = uploadFileUrl($projeto['imagem_principal'] ?? null);
+                                                    ?>
                                                     <?php if (!empty($projeto['imagem_principal'])): ?>
                                                         <?php if (isVideoFilename($projeto['imagem_principal'])): ?>
                                                             <div class="table-thumb-placeholder"><i class="ph ph-film-strip"></i></div>
-                                                        <?php else: ?>
-                                                            <img src="<?php echo UPLOAD_URL . $projeto['imagem_principal']; ?>" 
+                                                        <?php elseif ($projetoThumbUrl): ?>
+                                                            <img src="<?php echo htmlspecialchars($projetoThumbUrl); ?>" 
                                                                  alt="<?php echo htmlspecialchars($projeto['titulo']); ?>" 
                                                                  class="table-thumb">
+                                                        <?php else: ?>
+                                                            <div class="table-thumb-placeholder"><i class="ph ph-image"></i></div>
                                                         <?php endif; ?>
                                                     <?php else: ?>
                                                         <div class="table-thumb-placeholder"><i class="ph ph-image"></i></div>
@@ -205,12 +210,12 @@ try {
                                         <?php foreach ($ultimosArtigos as $artigo): ?>
                                             <tr>
                                                 <td>
-                                                    <?php if (!empty($artigo['imagem_1x1'])): ?>
-                                                        <img src="<?php echo UPLOAD_URL . $artigo['imagem_1x1']; ?>" 
-                                                             alt="<?php echo htmlspecialchars($artigo['titulo']); ?>" 
-                                                             class="table-thumb">
-                                                    <?php elseif (!empty($artigo['imagem_principal'])): ?>
-                                                        <img src="<?php echo UPLOAD_URL . $artigo['imagem_principal']; ?>" 
+                                                    <?php
+                                                        $artigoThumbUrl = uploadFileUrl($artigo['imagem_1x1'] ?? null)
+                                                            ?: uploadFileUrl($artigo['imagem_principal'] ?? null);
+                                                    ?>
+                                                    <?php if ($artigoThumbUrl): ?>
+                                                        <img src="<?php echo htmlspecialchars($artigoThumbUrl); ?>" 
                                                              alt="<?php echo htmlspecialchars($artigo['titulo']); ?>" 
                                                              class="table-thumb">
                                                     <?php else: ?>

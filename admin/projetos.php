@@ -131,13 +131,16 @@ $projetosMissing = ['en' => [], 'es' => []];
                                     <?php foreach ($projetos as $p): ?>
                                         <tr>
 	                                            <td>
+                                                    <?php $projetoThumbUrl = uploadFileUrl($p['imagem_principal'] ?? null); ?>
 	                                                <?php if ($p['imagem_principal']): ?>
 	                                                    <?php if (isVideoFilename($p['imagem_principal'])): ?>
 	                                                        <div class="table-thumb-placeholder"><i class="ph ph-film-strip"></i></div>
+                                                        <?php elseif ($projetoThumbUrl): ?>
+                                                            <img src="<?php echo htmlspecialchars($projetoThumbUrl); ?>" 
+                                                                 alt="<?php echo htmlspecialchars($p['titulo']); ?>" 
+                                                                 class="table-thumb">
 	                                                    <?php else: ?>
-	                                                        <img src="<?php echo UPLOAD_URL . $p['imagem_principal']; ?>" 
-	                                                             alt="<?php echo htmlspecialchars($p['titulo']); ?>" 
-	                                                             class="table-thumb">
+                                                            <div class="table-thumb-placeholder"><i class="ph ph-image"></i></div>
 	                                                    <?php endif; ?>
 	                                                <?php else: ?>
 	                                                    <div class="table-thumb-placeholder"><i class="ph ph-image"></i></div>
@@ -297,11 +300,14 @@ $projetosMissing = ['en' => [], 'es' => []];
                                     <input type="file" id="imagem_principal" name="imagem_principal" accept="image/*,video/mp4,video/webm">
                                     <small class="form-text">Aceita imagem (JPG/PNG/WebP/GIF) ou vídeo (MP4/WebM).</small>
                                     <?php if (!empty($projeto['imagem_principal'])): ?>
+                                        <?php $principalMediaUrl = uploadFileUrl($projeto['imagem_principal']); ?>
                                         <div class="image-preview">
-                                            <?php if (isVideoFilename($projeto['imagem_principal'])): ?>
-                                                <video src="<?php echo UPLOAD_URL . $projeto['imagem_principal']; ?>" controls class="w-full" style="max-height:320px;"></video>
+                                            <?php if (isVideoFilename($projeto['imagem_principal']) && $principalMediaUrl): ?>
+                                                <video src="<?php echo htmlspecialchars($principalMediaUrl); ?>" controls class="w-full" style="max-height:320px;"></video>
+                                            <?php elseif (!isVideoFilename($projeto['imagem_principal']) && $principalMediaUrl): ?>
+                                                <img src="<?php echo htmlspecialchars($principalMediaUrl); ?>" alt="Preview">
                                             <?php else: ?>
-                                                <img src="<?php echo UPLOAD_URL . $projeto['imagem_principal']; ?>" alt="Preview">
+                                                <div class="table-thumb-placeholder"><i class="ph ph-image"></i></div>
                                             <?php endif; ?>
                                         </div>
                                     <?php endif; ?>
@@ -319,10 +325,13 @@ $projetosMissing = ['en' => [], 'es' => []];
                                         <div class="gallery-preview">
                                             <?php foreach ($projeto['imagens_galeria'] as $img): ?>
                                                 <div class="gallery-item" data-filename="<?php echo htmlspecialchars($img); ?>" style="display:inline-block; position:relative; margin:6px;">
-                                                    <?php if (isVideoFilename($img)): ?>
-                                                        <video src="<?php echo UPLOAD_URL . $img; ?>" controls style="max-width:180px; max-height:120px; display:block;"></video>
+                                                    <?php $galleryMediaUrl = uploadFileUrl($img); ?>
+                                                    <?php if ($galleryMediaUrl && isVideoFilename($img)): ?>
+                                                        <video src="<?php echo htmlspecialchars($galleryMediaUrl); ?>" controls style="max-width:180px; max-height:120px; display:block;"></video>
+                                                    <?php elseif ($galleryMediaUrl): ?>
+                                                        <img src="<?php echo htmlspecialchars($galleryMediaUrl); ?>" alt="Gallery" style="max-width:180px; max-height:120px; display:block;">
                                                     <?php else: ?>
-                                                        <img src="<?php echo UPLOAD_URL . $img; ?>" alt="Gallery" style="max-width:180px; max-height:120px; display:block;">
+                                                        <div class="table-thumb-placeholder" style="width:180px;height:120px;"><i class="ph ph-image"></i></div>
                                                     <?php endif; ?>
                                                     <button type="button" class="btn btn-sm btn-danger" style="position:absolute; top:6px; right:6px;" onclick="deleteMedia(<?php echo (int)$projeto['id']; ?>, '<?php echo addslashes($img); ?>')">Deletar</button>
                                                 </div>

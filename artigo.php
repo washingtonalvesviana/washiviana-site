@@ -126,14 +126,19 @@ $seoDescription = !empty($artigo['meta_description'])
 $ogTitle = !empty($artigo['og_title']) ? $artigo['og_title'] : $seoTitle;
 $ogDescription = !empty($artigo['og_description']) ? $artigo['og_description'] : $seoDescription;
 
-$shareImageFile = (!empty($artigo['imagem_capa']) || !empty($artigo['imagem_1x1']) || !empty($artigo['imagem_principal']))
-    ? ($artigo['imagem_capa'] ?? $artigo['imagem_1x1'] ?? $artigo['imagem_principal'])
-    : null;
-$shareImageUrl = $shareImageFile ? (UPLOAD_URL . $shareImageFile) : null;
-$shareImagePath = $shareImageFile ? (UPLOAD_DIR . $shareImageFile) : null;
+$shareImageUrl = uploadFileUrl($artigo['imagem_capa'] ?? null)
+    ?: uploadFileUrl($artigo['imagem_1x1'] ?? null)
+    ?: uploadFileUrl($artigo['imagem_principal'] ?? null);
+$shareImagePath = uploadFilePath($artigo['imagem_capa'] ?? null);
+if (!$shareImagePath || !is_file($shareImagePath)) {
+    $shareImagePath = uploadFilePath($artigo['imagem_1x1'] ?? null);
+}
+if (!$shareImagePath || !is_file($shareImagePath)) {
+    $shareImagePath = uploadFilePath($artigo['imagem_principal'] ?? null);
+}
 $shareImageWidth = 1200;
 $shareImageHeight = 630;
-if ($shareImagePath && is_file($shareImagePath)) {
+if ($shareImageUrl && $shareImagePath && is_file($shareImagePath)) {
     $imageInfo = getimagesize($shareImagePath);
     if ($imageInfo !== false) {
         $shareImageWidth = $imageInfo[0];
@@ -400,12 +405,18 @@ if (!$schemaData) {
                              IMAGEM DE CAPA
                         ========================================= -->
                         <?php 
-                        $imagemCapa = $artigo['imagem_capa'] ?? $artigo['imagem_1x1'] ?? $artigo['imagem_principal'] ?? null;
-                        if ($imagemCapa): ?>
+                        $imagemCapaUrl = uploadFileUrl($artigo['imagem_capa'] ?? null)
+                            ?: uploadFileUrl($artigo['imagem_1x1'] ?? null)
+                            ?: uploadFileUrl($artigo['imagem_principal'] ?? null);
+                        if ($imagemCapaUrl): ?>
                         <section class="w-full rounded-xl overflow-hidden shadow-lg">
-                            <img src="<?php echo UPLOAD_URL . $imagemCapa; ?>" 
+                            <img src="<?php echo htmlspecialchars($imagemCapaUrl); ?>" 
                                  alt="<?php echo htmlspecialchars($artigo['titulo']); ?>"
                                  class="w-full h-auto max-h-[500px] object-cover">
+                        </section>
+                        <?php else: ?>
+                        <section class="w-full rounded-xl overflow-hidden shadow-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center min-h-[220px]">
+                            <i class="ph ph-article text-6xl text-primary/40"></i>
                         </section>
                         <?php endif; ?>
                         

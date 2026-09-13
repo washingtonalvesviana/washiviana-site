@@ -193,8 +193,16 @@ function criarArtigo() {
     
     // Upload de imagem principal (fallback)
     $imagem_principal = null;
+    $novaImagemPrincipalEnviada = false;
     if (isset($_FILES['imagem_principal']) && $_FILES['imagem_principal']['error'] === UPLOAD_ERR_OK) {
         $imagem_principal = uploadArquivo($_FILES['imagem_principal'], 'imagem');
+        $novaImagemPrincipalEnviada = !empty($imagem_principal);
+    }
+
+    // Blindagem: se houver imagem principal nova e imagem_1x1 órfã, limpa o campo 1x1.
+    if ($novaImagemPrincipalEnviada && !empty($imagem_1x1) && !uploadFileExists($imagem_1x1)) {
+        error_log("criarArtigo: limpando imagem_1x1 órfã '{$imagem_1x1}' (arquivo não encontrado)");
+        $imagem_1x1 = '';
     }
     
     // Upload de vídeo
@@ -342,8 +350,16 @@ function atualizarArtigo() {
     
     // Upload de imagem principal (fallback)
     $imagem_principal = $artigo['imagem_principal'];
+    $novaImagemPrincipalEnviada = false;
     if (isset($_FILES['imagem_principal']) && $_FILES['imagem_principal']['error'] === UPLOAD_ERR_OK) {
         $imagem_principal = uploadArquivo($_FILES['imagem_principal'], 'imagem');
+        $novaImagemPrincipalEnviada = !empty($imagem_principal);
+    }
+
+    // Blindagem: ao substituir imagem principal, limpa imagem_1x1 órfã para não bloquear fallback.
+    if ($novaImagemPrincipalEnviada && !empty($imagem_1x1) && !uploadFileExists($imagem_1x1)) {
+        error_log("atualizarArtigo: limpando imagem_1x1 órfã '{$imagem_1x1}' no artigo {$id}");
+        $imagem_1x1 = '';
     }
     
     // Upload de vídeo
