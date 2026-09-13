@@ -1,310 +1,256 @@
-# 🚀 WASHIVIANA PORTFOLIO - Guia de Deploy
+# Deploy e Operação — Washiviana Site
 
-Este guia detalha o processo completo de instalação e deploy do site portfolio na **Hostinger**.
+Guia de instalação, configuração e operação. O sistema roda em **Nginx + PHP-FPM** com **PostgreSQL**; também suporta MySQL e Apache (via `.htaccess`).
 
----
-
-## 📋 Pré-requisitos
-
-### Na Hostinger:
-- ✅ Plano de hospedagem com suporte a PHP 7.4+ e MySQL
-- ✅ Acesso ao painel de controle (hPanel)
-- ✅ Acesso FTP/SFTP (FileZilla, WinSCP, ou similar)
-- ✅ Banco de dados MySQL criado
-
-### Localmente:
-- Cliente FTP (recomendado: FileZilla)
-- Editor de texto para editar configurações
-- Node.js + npm (para gerar o CSS do Tailwind localmente)
-- API Key da OpenAI (para funcionalidade de IA)
+> Produção atual: repositório em `/var/www/washiviana.com`, com symlink `/home/washi/washiviana-site` (usado pelas units systemd).
 
 ---
 
-## 🗂️ Estrutura de Arquivos
+## 1. Pré-requisitos
 
-Certifique-se de que todos os arquivos foram criados:
+### Servidor
 
-```
-washiviana/
-├── admin/                      # Painel administrativo
-│   ├── includes/
-│   │   ├── header.php
-│   │   └── sidebar.php
-│   ├── index.php              # Login
-│   ├── dashboard.php          # Dashboard
-│   ├── projetos.php           # Gerenciar projetos
-│   ├── categorias.php         # Gerenciar categorias
-│   ├── configuracoes.php      # Configurações
-│   └── logout.php             # Logout
-├── api/                        # Backend APIs
-│   ├── config.php             # Configuração MySQL
-│   ├── auth.php               # Autenticação
-│   ├── openai.php             # Integração OpenAI
-│   ├── projetos.php           # CRUD Projetos
-│   ├── categorias.php         # CRUD Categorias
-│   ├── upload.php             # Upload de imagens
-│   ├── linkedin.php           # Posts LinkedIn
-│   └── configuracoes-save.php # Salvar configs
-├── assets/
-│   ├── css/
-│   │   ├── admin.css          # Estilos admin
-│   │   └── main.css           # Estilos públicos
-│   ├── js/
-│   │   ├── admin.js           # Scripts admin
-│   │   └── main.js            # Scripts públicos
-│   └── images/
-│       └── washington.jpg     # Sua foto (ADICIONAR!)
-├── uploads/                    # Imagens dos projetos (criar manualmente)
-├── index.php                   # Homepage
-├── projetos.php                # Lista de projetos
-├── projeto.php                 # Detalhes do projeto
-├── database.sql                # Script do banco
-├── .htaccess                   # Configurações Apache
-└── README_DEPLOY.md            # Este arquivo
-```
-
----
-
-## 🛠️ Passo a Passo de Instalação
-
-### **0. Gerar o CSS (Tailwind local)**
-
-Antes de subir os arquivos, gere o CSS que o site usa (substitui o `cdn.tailwindcss.com`):
+- **PHP 8.0+** (testado em 8.3) com extensões: `pdo`, `pdo_pgsql` (ou `pdo_mysql`), `curl`, `mbstring`, `gd`, `fileinfo`, `json`.
+- **PostgreSQL 14+** (ou MySQL 5.7+).
+- **Nginx + PHP-FPM** (cenário de produção) ou Apache com `mod_rewrite`.
+- **FFmpeg** no `PATH` — necessário apenas para o worker de vídeo.
 
 ```bash
-npm install
-npm run build:css
+sudo apt update && sudo apt install -y ffmpeg
 ```
 
-✅ **Resultado:** o arquivo `assets/css/tailwind.min.css` é gerado/atualizado (suba ele junto no deploy). Se você alterar classes/cores, rode o build novamente e incremente o `v=` do arquivo no HTML para “quebrar cache”.
+### Opcional
 
-### **1. Criar Banco de Dados MySQL na Hostinger**
+- Node.js 18+ apenas para o subprojeto `tailormade/`.
 
-1. Acesse o **hPanel** da Hostinger
-2. Vá em **Bases de dados** → **Gerenciador MySQL**
-3. Clique em **Criar nova base de dados**
-4. Anote as informações:
-   - **Nome do banco:** washiviana_portfolio (ou nome escolhido)
-   - **Usuário:** (será gerado automaticamente)
-   - **Senha:** (defina uma senha forte)
-   - **Host:** localhost
+---
 
-### **2. Importar Estrutura do Banco**
+## 2. Obter o código
 
-1. No hPanel, vá em **phpMyAdmin**
-2. Selecione o banco criado
-3. Clique na aba **Importar**
-4. Selecione o arquivo `database.sql`
-5. Clique em **Executar**
+```bash
+cd /var/www
+git clone <url-do-repositorio> washiviana.com
+cd washiviana.com
+```
 
-✅ **Resultado:** Todas as tabelas serão criadas com dados iniciais
+Opcional (mantém o path esperado pelas units systemd):
 
-### **3. Configurar Conexão com Banco de Dados**
+```bash
+ln -s /var/www/washiviana.com /home/washi/washiviana-site
+```
 
-Edite o arquivo `api/config.php` e atualize as credenciais:
+---
+
+## 3. Banco de dados
+
+### PostgreSQL (produção)
+
+```bash
+sudo -u postgres psql -c "CREATE DATABASE washiviana;"
+sudo -u postgres psql -d washiviana -f database_postgres.sql
+```
+
+Aplique as migrations na ordem (são incrementais e idempotentes na maioria dos casos):
+
+```bash
+for f in migrations/0*.sql; do
+  echo "== $f =="
+  sudo -u postgres psql -d washiviana -f "$f"
+done
+# migrations em PHP (002, 003, 004, 005) executam via CLI:
+php migrations/002_criar_tabelas_redes.php
+php migrations/003_add_person_urn.php
+php migrations/004_agendamento_posts.php
+php migrations/005_add_organization_urn.php
+```
+
+> As migrations `.sql` são PostgreSQL-first: aplique-as pelo `psql` e as migrations `.php` pelo CLI (elas usam `api/config.local.php`).
+
+> `012_grant_sequences.sql` garante permissões de sequência para o role da aplicação — execute-o com superusuário ao usar um usuário não-dono do schema.
+
+### MySQL
+
+```bash
+mysql -u root -p -e "CREATE DATABASE washiviana_portfolio CHARACTER SET utf8mb4;"
+mysql -u root -p washiviana_portfolio < database.sql
+```
+
+---
+
+## 4. Configuração da aplicação
+
+Crie **`api/config.local.php`** (não versionado):
 
 ```php
+<?php
+define('DB_DRIVER', 'pgsql');   // 'pgsql' ou 'mysql'
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'washiviana_portfolio'); // Nome do seu banco
-define('DB_USER', 'seu_usuario');         // Usuário gerado
-define('DB_PASS', 'sua_senha');           // Sua senha forte
-define('DB_CHARSET', 'utf8mb4');
+define('DB_PORT', '5432');
+define('DB_NAME', 'washiviana');
+define('DB_USER', 'postgres');
+define('DB_PASS', 'SUA_SENHA_FORTE');
+define('DB_CHARSET', 'utf8');   // usado apenas no MySQL
 ```
 
-### **4. Configurar URLs**
+Alternativamente, use variáveis de ambiente (`DB_DRIVER`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `DB_CHARSET`).
 
-No mesmo arquivo `api/config.php`, atualize a BASE_URL:
+A `BASE_URL` e o HTTPS são detectados automaticamente. Em produção atrás de proxy, garanta o header `X-Forwarded-Proto: https`.
 
-```php
-define('BASE_URL', 'https://washiviana.com'); // Seu domínio real
+### Permissões
+
+```bash
+chown -R www-data:www-data /var/www/washiviana.com
+chmod -R 755 /var/www/washiviana.com
+chmod -R 775 /var/www/washiviana.com/uploads
 ```
 
-### **5. Upload via FTP**
-
-#### **Conectar via FTP:**
-1. Abra FileZilla (ou cliente FTP preferido)
-2. **Host:** ftp.washiviana.com (ou IP fornecido pela Hostinger)
-3. **Usuário:** seu_usuario_ftp
-4. **Senha:** sua_senha_ftp
-5. **Porta:** 21
-
-#### **Fazer Upload:**
-1. Navegue até a pasta `public_html` no servidor
-2. Faça upload de **todos os arquivos e pastas** do projeto
-3. **Importante:** Mantenha a estrutura de pastas intacta
-
-### **6. Configurar Permissões**
-
-Via FTP, ajuste permissões da pasta `uploads`:
-
-1. Clique com botão direito na pasta `uploads`
-2. Selecione **Permissões de Arquivo**
-3. Defina permissões como **755** ou **777**
-4. Marque **Aplicar recursivamente a subdiretórios**
-
-### **7. Adicionar Sua Foto**
-
-1. Prepare a imagem da poltrona (formato JPG/PNG)
-2. Renomeie para `washington.jpg`
-3. Faça upload para `assets/images/washington.jpg`
-
-### **8. Testar Instalação**
-
-Acesse: `https://washiviana.com`
-
-✅ **Deve exibir:** Homepage com foto e textos padrão
+O save path de sessão é criado automaticamente em `sys_get_temp_dir()/washiviana_sessions` (fora do webroot).
 
 ---
 
-## 🔐 Primeiro Acesso ao Admin
+## 5. Servidor web
 
-### **1. Acessar Painel**
+### Nginx + PHP-FPM (recomendado)
 
-URL: `https://washiviana.com/admin`
+- Sirva arquivos estáticos (`assets/`, `uploads/`) diretamente.
+- Encaminhe `*.php` para o PHP-FPM.
+- Rotas limpas (`/pt/...`, `/en/...`) são tratadas pelo `index.php` (front controller); configure `try_files` para o `index.php` quando o caminho não for um arquivo real.
 
-### **2. Credenciais Padrão:**
+Bloqueie o acesso HTTP a caminhos sensíveis:
 
-```
-Email: contact@washiviana.com
-Senha: Washiviana@2026
+```nginx
+location ~ ^/(api/config\.php|api/config\.local\.php|database.*\.sql|migrations/|scripts/|tests/|outros/|\.git/) {
+    deny all;
+    return 404;
+}
+location ~ /\.(?!well-known) { deny all; }
 ```
 
-⚠️ **IMPORTANTE:** Altere a senha imediatamente!
+> **Importante:** os diretórios `scripts/`, `migrations/`, `tests/` e `outros/` e os scripts de token na raiz **não devem ser acessíveis pela web**.
 
-### **3. Configurar OpenAI API Key**
+### Apache
 
-1. No admin, vá em **Configurações**
-2. Insira sua **OpenAI API Key** no campo apropriado
-3. Escolha o modelo (GPT-4 recomendado)
-4. Clique em **Testar Conexão**
-5. Salve as configurações
+O `.htaccess` incluso já define rewrite, HTTPS, headers de segurança (CSP, `X-Frame-Options`), cache e limites de upload. Habilite `mod_rewrite`, `mod_headers` e `mod_expires`. O acesso é servido pelo `index.php`.
 
 ---
 
-## ✏️ Personalizações Iniciais
+## 6. CSS (Tailwind)
 
-### **1. Atualizar Textos da Homepage**
+O CSS consumido em produção é o arquivo **compilado e versionado** `assets/css/tailwind.min.css`; a entrada é `assets/css/tailwind-input.css`.
 
-No admin → **Configurações**:
-- **Título do Site:** Washington Viana
-- **Subtítulo:** Interdisciplinary Creative & Developer
-- **Frase de Impacto:** (sua frase personalizada)
-- **Email:** contact@washiviana.com
-- **Telefone:** +55 19 9 9942 2907
-- **LinkedIn URL:** sua-url-linkedin
+Hoje **não há configuração de build na raiz** do repositório. Se precisar recompilar (por exemplo, ao adicionar classes), crie uma configuração Tailwind apontando para os templates PHP e gere o arquivo, por exemplo:
 
-### **2. Gerenciar Categorias**
+```bash
+npx tailwindcss -c tailwind.config.js -i assets/css/tailwind-input.css -o assets/css/tailwind.min.css --minify
+```
 
-No admin → **Categorias**:
-- Revisar categorias padrão
-- Adicionar novas se necessário
-- Reordenar conforme preferência
-
-### **3. Criar Primeiro Projeto**
-
-No admin → **Projetos** → **Novo Projeto**:
-1. Preencha título, descrição, categoria
-2. Faça upload da imagem principal
-3. Adicione galeria (opcional)
-4. Use o **IA Copilot** para gerar descrição e post LinkedIn
-5. Marque como "Destaque" se desejar
-6. Salve
+Depois, incremente o parâmetro `?v=` das referências em `admin/includes/header.php` e nos templates públicos para quebrar cache.
 
 ---
 
-## 🔧 Solução de Problemas
+## 7. Workers e agendamento
 
-### **Erro: "Cannot connect to database"**
-- ✅ Verifique credenciais em `api/config.php`
-- ✅ Confirme que o banco existe no phpMyAdmin
-- ✅ Teste conexão manualmente via phpMyAdmin
+As units/timers de exemplo estão em `scripts/systemd/`. Instale como serviço do sistema:
 
-### **Erro: "Upload failed"**
-- ✅ Verifique permissões da pasta `uploads` (775 ou 777)
-- ✅ Aumente limites no `.htaccess` se necessário
+```bash
+sudo cp scripts/systemd/washiviana-articles-publish.* /etc/systemd/system/
+sudo cp scripts/systemd/washiviana-social-publish.* /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now washiviana-articles-publish.timer
+sudo systemctl enable --now washiviana-social-publish.timer
+```
 
-### **IA Copilot não funciona**
-- ✅ Verifique se API Key está configurada em Configurações
-- ✅ Teste conexão usando botão "Testar Conexão"
-- ✅ Confirme saldo disponível na conta OpenAI
+Os arquivos assumem path `/home/washi/washiviana-site` e usuário `washi` — ajuste `User` e `WorkingDirectory` se o seu ambiente for diferente.
 
-### **Página em branco / erro 500**
-- ✅ Verifique logs de erro do PHP no hPanel
-- ✅ Ative `display_errors` temporariamente no `.htaccess`
-- ✅ Verifique sintaxe dos arquivos PHP
+### Vídeo (Reels)
 
-### **Imagens não aparecem**
-- ✅ Confirme que as imagens foram feitas upload corretamente
-- ✅ Verifique permissões da pasta `uploads`
-- ✅ Teste URL direta da imagem no navegador
+O `video_worker.php` também pode rodar por timer/cron. Ele:
+- consome jobs `pending` de `video_jobs`;
+- usa o provider de vídeo configurado e faz **fallback para FFmpeg**;
+- notifica falhas por e-mail (`notify_email`) e, se configurado, no Sentry;
+- requer `ffmpeg` no `PATH` (valida antes de processar).
 
----
+### Alternativa via cron
 
-## 🔒 Segurança em Produção
+```cron
+* * * * * /usr/bin/php /var/www/washiviana.com/scripts/worker_publish_articles.php
+* * * * * /usr/bin/php /var/www/washiviana.com/scripts/worker_publish_scheduled.php
+* * * * * /usr/bin/php /var/www/washiviana.com/scripts/video_worker.php
+```
 
-### **Após Deploy:**
+Verificações úteis:
 
-1. **Alterar senha padrão do admin**
-2. **Remover ou renomear `database.sql`** (para evitar exposição)
-3. **Desabilitar display_errors** no `.htaccess`:
-   ```apache
-   php_flag display_errors Off
-   ```
-4. **Habilitar HTTPS** (descomente linhas no `.htaccess`)
-5. **Backup regular** do banco de dados via phpMyAdmin
+```bash
+sudo systemctl status washiviana-social-publish.timer
+php scripts/worker_publish_scheduled.php        # execução manual (debug)
+sudo journalctl -u washiviana-social-publish.service -n 200
+```
 
 ---
 
-## 📊 Manutenção e Backups
+## 8. Primeiro acesso e integrações
 
-### **Backup do Banco de Dados:**
-1. Acesse phpMyAdmin
-2. Selecione o banco
-3. Clique em **Exportar**
-4. Escolha **SQL** e baixe
-5. **Frequência recomendada:** Semanal
+1. No admin (`/admin/`), faça login com o usuário semeado em `database.sql` (e-mail `contact@washiviana.com`) e **troque a senha imediatamente**.
+2. Em **Admin → Configurações**, defina: dados do site, `notify_email`, provedor/modelo de IA e as chaves de API.
+3. Em **Admin → Redes Sociais**, configure as credenciais:
+   - **LinkedIn**: client id/secret, tokens e escolha entre perfil pessoal ou organização.
+   - **Instagram/Facebook**: Page Access Token e Page ID; opcionalmente `facebook_api_version` (padrão `v17.0`).
+   - Redirect URI do callback: `https://SEU_DOMINIO/api/oauth_callback.php?rede=instagram` (e `?rede=facebook` se aplicável).
 
-### **Backup dos Arquivos:**
-1. Via FTP, baixe toda a pasta `uploads`
-2. **Frequência recomendada:** Mensal
+Consulte [README_SOCIAL_VARIANTS.md](README_SOCIAL_VARIANTS.md) para o roteiro completo de teste (OAuth, publicação manual, agendada e vídeo).
 
 ---
 
-## 📞 Suporte
+## 9. Atualização (deploy de nova versão)
 
-Para dúvidas ou problemas:
-- Consulte documentação da Hostinger: https://support.hostinger.com
-- Verifique logs de erro no hPanel
-- Teste em ambiente local primeiro (XAMPP/WAMP)
+```bash
+cd /var/www/washiviana.com
+git pull
+# aplique novas migrations, se houver
+for f in migrations/<novas>.sql; do sudo -u postgres psql -d washiviana -f "$f"; done
+# se alterou CSS, rode o build do Tailwind e ajuste o ?v=
+sudo systemctl reload php8.3-fpm   # ajuste a versão do PHP-FPM
+```
 
----
-
-## ✅ Checklist de Deploy
-
-- [ ] Banco de dados criado e importado
-- [ ] Credenciais configuradas em `api/config.php`
-- [ ] BASE_URL atualizada
-- [ ] Todos os arquivos feitos upload via FTP
-- [ ] Permissões da pasta `uploads` configuradas
-- [ ] Foto `washington.jpg` adicionada
-- [ ] Login admin testado
-- [ ] Senha padrão alterada
-- [ ] OpenAI API Key configurada
-- [ ] Textos da homepage personalizados
-- [ ] Primeiro projeto criado
-- [ ] Site testado em diferentes navegadores
-- [ ] HTTPS habilitado (se disponível)
-- [ ] Backup inicial criado
+Não é necessário reiniciar os workers para mudanças de código (eles rodam `oneshot` a cada minuto).
 
 ---
 
-## 🎉 Pronto!
+## 10. Segurança em produção
 
-Seu portfolio está no ar em **https://washiviana.com**
-
-Acesse o painel admin em **https://washiviana.com/admin** para gerenciar seu conteúdo.
+- [ ] `api/config.local.php` fora do versionamento e inacessível via web.
+- [ ] Bloquear HTTP para `scripts/`, `migrations/`, `tests/`, `outros/`, `database*.sql` e `.git/`.
+- [ ] Remover scripts de token/debug do servidor (`update_new_token.php`, `outros/test_*.php`).
+- [ ] Senha do admin trocada; `display_errors` desligado.
+- [ ] HTTPS ativo e cookies `Secure`.
+- [ ] Backups regulares do PostgreSQL e de `uploads/`.
+- [ ] Rotacionar quaisquer credenciais que já tenham sido expostas em texto plano.
 
 ---
 
-**Desenvolvido com ❤️ por Washington Viana**
+## 11. Solução de problemas
 
+| Sintoma | Verificações |
+|---|---|
+| "Cannot connect to database" | Credenciais em `api/config.local.php`; `DB_DRIVER` correto; banco acessível |
+| Upload falha | Permissões de `uploads/` (775), limites no Nginx/PHP (`upload_max_filesize`, `post_max_size`) |
+| IA não responde | Chave do provedor em Admin → Configurações; testar conexão; modelo válido |
+| Worker não publica | `journalctl` da unit; status da variante (`pronto`) e `scheduled_at`; `publicacoes_redes.erro_mensagem` |
+| Vídeo falha | `ffmpeg` no `PATH`; `last_error` em `video_jobs`; provider de vídeo configurado |
+| 504 em geração i18n | Operação longa; gerar idiomas individualmente; revisar timeout do PHP-FPM |
+| Imagem não aparece | Arquivo inexistente em `uploads/` (o template só exibe mídia existente); conferir nome no banco |
+
+---
+
+## 12. Checklist de deploy
+
+- [ ] Banco criado e schema/migrations aplicados.
+- [ ] `api/config.local.php` configurado.
+- [ ] Permissões de arquivos e `uploads/` ajustadas.
+- [ ] Nginx/Apache servindo o site e bloqueando paths sensíveis.
+- [ ] FFmpeg instalado (se usar vídeo).
+- [ ] Timers systemd habilitados.
+- [ ] Login admin testado e senha trocada.
+- [ ] Chaves de IA e redes sociais configuradas.
+- [ ] Backup inicial do banco e de `uploads/`.
+- [ ] Smoke test: home, listagem, detalhe de artigo/projeto, salvar no admin, publicar variante de teste.
