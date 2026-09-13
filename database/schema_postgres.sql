@@ -16,7 +16,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict uKLym2CgfvYyM8QGiLLZEVfWqqid5w1NvbW3pn0BrGjbaUucqSfidRJ9U9hsrmM
+\restrict HsDfDVEhIBHXvRq9s6SYamZA4Ii22g3MTLMiUyCaLBQVT0oUVcKp8FNEkncfMa9
 
 -- Dumped from database version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
@@ -943,7 +943,6 @@ CREATE TABLE public.redes_sociais_config (
     client_secret character varying(255),
     access_token text,
     refresh_token text,
-    token_expira_em timestamp without time zone,
     page_id character varying(100),
     user_id character varying(100),
     dados_extras jsonb,
@@ -2117,5 +2116,5 @@ ALTER TABLE ONLY public.video_jobs
 -- PostgreSQL database dump complete
 --
 
-\unrestrict uKLym2CgfvYyM8QGiLLZEVfWqqid5w1NvbW3pn0BrGjbaUucqSfidRJ9U9hsrmM
+\unrestrict HsDfDVEhIBHXvRq9s6SYamZA4Ii22g3MTLMiUyCaLBQVT0oUVcKp8FNEkncfMa9
 

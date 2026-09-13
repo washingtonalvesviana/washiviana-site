@@ -44,4 +44,4 @@ Não edite `schema_postgres.sql` à mão.
 
 - `legacy/database.mysql.legacy.sql` e `legacy/database_artigos.mysql.legacy.sql` são scripts MySQL antigos, sem relação com a produção atual.
 - `legacy/database_postgres.legacy.sql` era o bootstrap PostgreSQL original, porém incompleto/desatualizado (ex.: `artigos` sem `categoria_id` e com colunas inexistentes).
-- Colunas duplicadas conhecidas em `redes_sociais_config` (`token_expira_em` e `token_expires_at`) são legado a limpar no futuro.
+- A coluna morta `redes_sociais_config.token_expira_em` (duplicata de `token_expires_at`) foi removida pela migration `015_drop_token_expira_em.sql`.
