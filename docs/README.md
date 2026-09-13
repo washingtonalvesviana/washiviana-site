@@ -107,6 +107,7 @@ washiviana.com/
 │   ├── worker_publish_scheduled.php   # Publica variantes sociais agendadas
 │   ├── video_worker.php               # Processa video_jobs (FFmpeg/provider)
 │   ├── radar_run.php                  # Coleta do Radar via CLI
+│   ├── maintenance/                   # Utilitários pontuais (tokens, fix de tabelas)
 │   └── systemd/                       # Units e timers de exemplo
 ├── migrations/               # Migrations incrementais (001..014)
 ├── assets/                   # css/js/imgs do site e do admin
@@ -190,7 +191,8 @@ Falhas de job podem notificar por e-mail (`notify_email`) e, se configurado, par
 ## Scripts utilitários
 
 - `scripts/audit_project_media.php` — audita referências de mídia de projetos e valida arquivos em `uploads/`.
-- Demais scripts em `scripts/` e `outros/` são ferramentas de manutenção/debug; alguns estão no `.gitignore`. Executar apenas via CLI.
+- `scripts/maintenance/` — utilitários pontuais (ativar LinkedIn, corrigir tabelas, atualizar token). Executar apenas via CLI.
+- Demais scripts em `outros/` são ferramentas de debug; alguns estão no `.gitignore`. Nunca expor via web.
 
 ---
 

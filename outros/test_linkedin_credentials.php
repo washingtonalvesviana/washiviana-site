@@ -104,7 +104,7 @@ try {
         // Se só falta ativar, oferecer botão para ativar
         if (count($erros) === 1 && $erros[0] === 'LinkedIn não está ativado') {
             echo "<p><strong>💡 Solução rápida:</strong></p>
-            <form method='POST' action='ativar_linkedin.php' style='margin-top: 15px;'>
+            <form method='POST' action='../scripts/maintenance/ativar_linkedin.php' style='margin-top: 15px;'>
                 <button type='submit' style='padding: 10px 20px; background: #0077b5; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;'>
                     ✅ Ativar LinkedIn Agora
                 </button>

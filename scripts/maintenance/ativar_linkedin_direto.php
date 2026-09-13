@@ -2,7 +2,7 @@
 /**
  * Script direto para ativar LinkedIn
  */
-require_once __DIR__ . '/api/config.php';
+require_once __DIR__ . '/../../api/config.php';
 
 try {
     $stmt = $pdo->prepare("

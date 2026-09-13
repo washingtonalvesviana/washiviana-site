@@ -4,7 +4,7 @@
  * Execute este arquivo apenas UMA VEZ para criar o usuário administrador
  */
 
-require_once __DIR__ . '/api/config.php';
+require_once __DIR__ . '/../../api/config.php';
 
 echo "<h1>Criar Usuário Administrador</h1>";
 

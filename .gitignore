@@ -45,7 +45,7 @@ desktop.ini
 *.sqlite3
 
 # Local token/test utilities: podem conter credenciais de producao. Nunca versionar.
-/update_new_token.php
+/scripts/maintenance/update_new_token.php
 /outros/test_correct_token.php
 /outros/test_linkedin_full.php
 /outros/test_linkedin_simple.php

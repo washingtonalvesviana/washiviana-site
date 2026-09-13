@@ -2,7 +2,7 @@
 /**
  * Script para criar tabelas faltantes
  */
-require_once __DIR__ . '/api/config.php';
+require_once __DIR__ . '/../../api/config.php';
 
 echo "<h1>Criando tabelas faltantes</h1><pre>";
 

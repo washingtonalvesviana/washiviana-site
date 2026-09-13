@@ -2,7 +2,7 @@
 /**
  * Script para corrigir tabela artigos - FORÇA RECRIAÇÃO
  */
-require_once __DIR__ . '/api/config.php';
+require_once __DIR__ . '/../../api/config.php';
 
 echo "<h1>Corrigindo tabelas de artigos</h1><pre>";
 

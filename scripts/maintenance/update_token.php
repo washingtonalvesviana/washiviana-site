@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/api/config.php';
+require_once __DIR__ . '/../../api/config.php';
 
 $newToken = getenv('LINKEDIN_NEW_TOKEN') ?: 'YOUR_NEW_LINKEDIN_TOKEN';
 

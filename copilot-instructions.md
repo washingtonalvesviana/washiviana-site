@@ -134,7 +134,7 @@ Washiviana Site e uma aplicacao web em PHP ja operando em producao, com area pub
 - Depends on: `api/config.php`, optional feature libs like `api/radar_lib.php` and `api/image_optimizer.php`.
 - Used by: Admin UI AJAX, scripts, and occasionally server-side includes.
 - Purpose: Background execution, batch updates, migrations, and operational tooling.
-- Location: `scripts/*.php`, `migrations/*.php`, utility scripts at repository root (for example `update_token.php`, `check_tables.php`).
+- Location: `scripts/*.php`, `scripts/maintenance/*.php`, `migrations/*.php`, plus workers and utilities (for example `scripts/worker_publish_scheduled.php`, `scripts/maintenance/update_token.php`).
 - Contains: Cron/systemd-compatible workers and one-off maintenance routines.
 - Depends on: `api/config.php` and feature modules (`api/radar_lib.php`).
 - Used by: Cron/systemd/manual CLI execution.

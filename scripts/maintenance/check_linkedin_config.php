@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/api/config.php';
+require_once __DIR__ . '/../../api/config.php';
 
 $stmt = $pdo->query("SELECT ativo, person_urn, organization_urn, publish_target, LENGTH(access_token) as token_len FROM redes_sociais_config WHERE rede = 'linkedin'");
 $r = $stmt->fetch(PDO::FETCH_ASSOC);

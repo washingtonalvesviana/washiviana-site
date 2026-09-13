@@ -2,7 +2,7 @@
 /**
  * Script para ativar o LinkedIn no banco de dados
  */
-require_once __DIR__ . '/api/config.php';
+require_once __DIR__ . '/../../api/config.php';
 
 // Permitir POST ou GET
 $ativar = $_POST['ativar'] ?? $_GET['ativar'] ?? true;
