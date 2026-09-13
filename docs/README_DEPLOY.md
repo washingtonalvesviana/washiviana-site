@@ -47,7 +47,8 @@ ln -s /var/www/washiviana.com /home/washi/washiviana-site
 
 ```bash
 sudo -u postgres psql -c "CREATE DATABASE washiviana;"
-sudo -u postgres psql -d washiviana -f database_postgres.sql
+sudo -u postgres psql -d washiviana -f database/schema_postgres.sql
+sudo -u postgres psql -d washiviana -f database/seed.sql
 ```
 
 Aplique as migrations na ordem (são incrementais e idempotentes na maioria dos casos):
@@ -71,8 +72,7 @@ php migrations/005_add_organization_urn.php
 ### MySQL
 
 ```bash
-mysql -u root -p -e "CREATE DATABASE washiviana_portfolio CHARACTER SET utf8mb4;"
-mysql -u root -p washiviana_portfolio < database.sql
+> O suporte a MySQL é legado e não é a produção atual; os scripts MySQL antigos estão em `database/legacy/`. Use PostgreSQL.
 ```
 
 ---
@@ -190,7 +190,7 @@ sudo journalctl -u washiviana-social-publish.service -n 200
 
 ## 8. Primeiro acesso e integrações
 
-1. No admin (`/admin/`), faça login com o usuário semeado em `database.sql` (e-mail `contact@washiviana.com`) e **troque a senha imediatamente**.
+1. No admin (`/admin/`), faça login com o usuário semeado em `database/seed.sql` (e-mail `contact@washiviana.com`) e **troque a senha imediatamente**.
 2. Em **Admin → Configurações**, defina: dados do site, `notify_email`, provedor/modelo de IA e as chaves de API.
 3. Em **Admin → Redes Sociais**, configure as credenciais:
    - **LinkedIn**: client id/secret, tokens e escolha entre perfil pessoal ou organização.

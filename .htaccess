@@ -27,11 +27,11 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
     Deny from all
 </Files>
 
-# Proteger database.sql
-<Files "database.sql">
+# Proteger scripts SQL do banco de dados
+<FilesMatch "\.sql$">
     Order allow,deny
     Deny from all
-</Files>
+</FilesMatch>
 
 # Desabilitar listagem de diretórios
 Options -Indexes

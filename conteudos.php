@@ -284,7 +284,7 @@ if ($categoriaAtual) {
                                 </p>
                                 <div class="bg-neutral-50 rounded-lg p-4 max-w-lg mx-auto text-left">
                                     <code class="text-sm text-neutral-700">
-                                        mysql -u root -p washiviana_portfolio < database_artigos.sql
+                                        psql -d washiviana -f database/schema_postgres.sql
                                     </code>
                                 </div>
                             </div>

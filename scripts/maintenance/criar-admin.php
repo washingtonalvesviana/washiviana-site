@@ -48,13 +48,13 @@ try {
     if (strpos($e->getMessage(), "Table") !== false && strpos($e->getMessage(), "doesn't exist") !== false) {
         echo "<br><div style='background: #fff3cd; padding: 20px; border-radius: 8px; border: 1px solid #ffc107;'>";
         echo "<h3>📋 A tabela 'usuarios' não existe!</h3>";
-        echo "<p>Você precisa importar o arquivo <strong>database.sql</strong> primeiro.</p>";
+        echo "<p>Você precisa importar o schema <strong>database/schema_postgres.sql</strong> primeiro.</p>";
         echo "<p><strong>Passos:</strong></p>";
         echo "<ol>";
         echo "<li>Acesse <strong>phpMyAdmin</strong></li>";
         echo "<li>Selecione o banco <strong>washiviana_portfolio</strong></li>";
         echo "<li>Clique em <strong>Importar</strong></li>";
-        echo "<li>Selecione o arquivo <strong>database.sql</strong></li>";
+        echo "<li>Selecione o arquivo <strong>database/schema_postgres.sql</strong></li>";
         echo "<li>Clique em <strong>Executar</strong></li>";
         echo "<li>Depois volte aqui e atualize esta página</li>";
         echo "</ol>";

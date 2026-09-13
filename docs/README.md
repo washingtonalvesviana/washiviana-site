@@ -109,6 +109,7 @@ washiviana.com/
 │   ├── radar_run.php                  # Coleta do Radar via CLI
 │   ├── maintenance/                   # Utilitários pontuais (tokens, fix de tabelas)
 │   └── systemd/                       # Units e timers de exemplo
+├── database/                 # Schema canônico PostgreSQL + seed + legacy
 ├── migrations/               # Migrations incrementais (001..014)
 ├── assets/                   # css/js/imgs do site e do admin
 ├── uploads/                  # Mídia enviada (não versionada)
@@ -154,7 +155,7 @@ A `BASE_URL` é detectada automaticamente a partir da requisição; HTTPS é inf
 
 ## Banco de dados
 
-- Schema base: `database.sql` (MySQL) e `database_postgres.sql` (PostgreSQL).
+- Schema canônico: `database/schema_postgres.sql` (PostgreSQL) + carga inicial `database/seed.sql`; arquivos antigos em `database/legacy/`.
 - Evolução: `migrations/001..014` (PostgreSQL-first), cobrindo artigos/redes, agendamento, URNs LinkedIn, i18n/SEO, radar, acessos, prompts, variantes sociais e `video_jobs`.
 - Produção usa PostgreSQL; `config.local.php` seleciona o driver.
 

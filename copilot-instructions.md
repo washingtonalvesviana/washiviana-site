@@ -20,7 +20,7 @@ Washiviana Site e uma aplicacao web em PHP ja operando em producao, com area pub
 
 ## Languages
 - PHP - Main application and API endpoints in `index.php`, `admin/`, `api/`, and `scripts/`.
-- SQL - Schema and migration scripts in `database.sql`, `database_postgres.sql`, `database_artigos.sql`, and `migrations/`.
+- SQL - Canonical schema in `database/schema_postgres.sql`, seed in `database/seed.sql`, incremental migrations in `migrations/`, and legacy scripts in `database/legacy/`.
 - JavaScript - Admin/public browser code in `assets/js/admin.js` and `assets/js/main.js`.
 - TypeScript - Next.js subproject config/runtime in `tailormade/next.config.ts` and `tailormade/tsconfig.json`.
 - CSS - Site/admin styles in `assets/css/` and generated Tailwind bundle `assets/css/tailwind.min.css`.
@@ -57,7 +57,7 @@ Washiviana Site e uma aplicacao web em PHP ja operando em producao, com area pub
 - npm scripts for Next.js lifecycle in `tailormade/package.json`.
 ## Platform Requirements
 - PHP + Apache + PDO + cURL + session support for core app (`api/config.php`, `.htaccess`).
-- MySQL or PostgreSQL instance for app data (`api/config.php`, `database.sql`, `database_postgres.sql`).
+- MySQL or PostgreSQL instance for app data (`api/config.php`, `database/schema_postgres.sql`, `migrations/`).
 - FFmpeg installed and available in PATH for video jobs (`scripts/video_worker.php`).
 - Node.js + npm for `tailormade/` frontend workflows (`tailormade/package.json`).
 - Shared hosting compatible deployment documented for Hostinger/FTP in `docs/README_DEPLOY.md`.
