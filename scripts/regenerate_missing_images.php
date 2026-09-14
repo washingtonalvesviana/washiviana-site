@@ -28,10 +28,16 @@ if (PHP_SAPI !== 'cli') {
 $apply = false;
 $limit = 0;
 $ids = [];
+$providerOpt = '';
+$modelOpt = '';
 
 foreach (array_slice($argv, 1) as $arg) {
     if ($arg === '--apply') {
         $apply = true;
+    } elseif (strpos($arg, '--provider=') === 0) {
+        $providerOpt = strtolower(trim(substr($arg, 11)));
+    } elseif (strpos($arg, '--model=') === 0) {
+        $modelOpt = trim(substr($arg, 8));
     } elseif (strpos($arg, '--limit=') === 0) {
         $v = substr($arg, 8);
         if (ctype_digit($v)) $limit = (int)$v;
@@ -105,25 +111,36 @@ foreach ($targets as $r) {
     }
 
     logLine("gerando #{$id} ...");
-    $_POST['prompt'] = $prompt;
-    $GLOBALS['WASHIVIANA_CAPTURE_JSON'] = true;
+    $provider = $providerOpt !== '' ? $providerOpt : getLlmProviderByType('image');
 
-    try {
-        gerarImagem();
-        $fail++;
-        logLine("FALHA #{$id}: sem resposta do gerador.");
-        continue;
-    } catch (WashivianaCapturedResponse $e) {
-        $res = $e->payload;
-    } catch (Throwable $e) {
-        $fail++;
-        logLine("FALHA #{$id}: excecao: " . $e->getMessage());
-        continue;
+    if ($provider === 'gemini') {
+        $_POST['prompt'] = $prompt;
+        $GLOBALS['WASHIVIANA_CAPTURE_JSON'] = true;
+        try {
+            gerarImagem();
+            $fail++;
+            logLine("FALHA #{$id}: sem resposta do gerador.");
+            continue;
+        } catch (WashivianaCapturedResponse $e) {
+            $res = $e->payload;
+        } catch (Throwable $e) {
+            $fail++;
+            logLine("FALHA #{$id}: excecao: " . $e->getMessage());
+            continue;
+        }
+    } else {
+        // gerarImagemComProvider (OpenAI) usa gpt-image-1 por padrao quando o modelo esta vazio
+        $model = $modelOpt;
+        $res = gerarImagemComProvider($provider, $prompt, $model);
+        if (!empty($res['success'])) {
+            $res = otimizarImagemResultado($res);
+        }
     }
 
     if (empty($res['success']) || empty($res['filename'])) {
         $fail++;
-        logLine("FALHA #{$id}: " . (string)($res['message'] ?? 'erro desconhecido'));
+        $msg = (string)($res['message'] ?? $res['error'] ?? 'erro desconhecido');
+        logLine("FALHA #{$id} [{$provider}]: " . $msg);
         continue;
     }
 
