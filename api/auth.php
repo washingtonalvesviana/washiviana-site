@@ -34,6 +34,10 @@ switch ($action) {
     case 'check':
         checkAuth();
         break;
+
+    case 'change_password':
+        changePassword();
+        break;
     
     default:
         jsonResponse(['success' => false, 'message' => 'Ação inválida.'], 400);
@@ -173,6 +177,60 @@ function checkAuth() {
         ]);
     } else {
         jsonResponse(['success' => true, 'authenticated' => false]);
+    }
+}
+
+/**
+ * Alterar senha do usuário autenticado
+ */
+function changePassword() {
+    global $pdo;
+
+    if (!isAuthenticated()) {
+        jsonResponse(['success' => false, 'message' => 'Não autorizado.'], 401);
+    }
+
+    $csrf = $_POST['csrf_token'] ?? '';
+    if (!validateCsrfToken($csrf)) {
+        jsonResponse(['success' => false, 'message' => 'Sessão expirada. Atualize a página e tente novamente.'], 403);
+    }
+
+    $atual = (string)($_POST['current_password'] ?? '');
+    $nova = (string)($_POST['new_password'] ?? '');
+    $confirm = (string)($_POST['confirm_password'] ?? '');
+
+    if ($atual === '' || $nova === '' || $confirm === '') {
+        jsonResponse(['success' => false, 'message' => 'Preencha todos os campos.'], 400);
+    }
+    if ($nova !== $confirm) {
+        jsonResponse(['success' => false, 'message' => 'A confirmação não confere com a nova senha.'], 400);
+    }
+    if (strlen($nova) < 8) {
+        jsonResponse(['success' => false, 'message' => 'A nova senha deve ter ao menos 8 caracteres.'], 400);
+    }
+    if ($nova === $atual) {
+        jsonResponse(['success' => false, 'message' => 'A nova senha deve ser diferente da atual.'], 400);
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT senha FROM usuarios WHERE id = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $row = $stmt->fetch();
+
+        if (!$row || !password_verify($atual, $row['senha'])) {
+            jsonResponse(['success' => false, 'message' => 'Senha atual incorreta.'], 401);
+        }
+
+        $hash = password_hash($nova, PASSWORD_BCRYPT);
+        $stmt = $pdo->prepare("UPDATE usuarios SET senha = ? WHERE id = ?");
+        $stmt->execute([$hash, $_SESSION['user_id']]);
+
+        session_regenerate_id(true);
+
+        jsonResponse(['success' => true, 'message' => 'Senha alterada com sucesso.']);
+    } catch (Exception $e) {
+        error_log('Change password error: ' . $e->getMessage());
+        jsonResponse(['success' => false, 'message' => 'Erro ao alterar a senha.'], 500);
     }
 }
 

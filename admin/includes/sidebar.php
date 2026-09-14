@@ -43,6 +43,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <span class="sidebar-text">Redes Sociais</span>
         </a>
         
+        <a href="senha.php" class="sidebar-link <?php echo $current_page == 'senha.php' ? 'active' : ''; ?>">
+            <span class="sidebar-icon"><i class="ph ph-lock-key"></i></span>
+            <span class="sidebar-text">Segurança</span>
+        </a>
+        
         <hr class="sidebar-divider">
         
         <a href="../index.php" class="sidebar-link" target="_blank">
