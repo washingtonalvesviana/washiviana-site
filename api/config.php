@@ -417,7 +417,27 @@ function validateCsrfToken($token) {
 /**
  * Resposta JSON
  */
+if (!class_exists('WashivianaCapturedResponse')) {
+    /**
+     * Exceção usada para capturar a saída de jsonResponse em modo CLI/biblioteca.
+     */
+    class WashivianaCapturedResponse extends Exception {
+        public $payload;
+        public $statusCode;
+        public function __construct($payload, $statusCode = 200) {
+            parent::__construct('Captured jsonResponse');
+            $this->payload = $payload;
+            $this->statusCode = $statusCode;
+        }
+    }
+}
+
 function jsonResponse($data, $statusCode = 200) {
+    // Modo captura (CLI): interrompe a execução devolvendo o payload via exceção
+    if (!empty($GLOBALS['WASHIVIANA_CAPTURE_JSON'])) {
+        throw new WashivianaCapturedResponse($data, $statusCode);
+    }
+
     // Limpar qualquer output anterior
     while (ob_get_level() > 0) {
         ob_end_clean();

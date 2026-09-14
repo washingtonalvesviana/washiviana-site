@@ -5,6 +5,9 @@
  */
 require_once __DIR__ . '/config.php';
 
+// Permite incluir este arquivo como biblioteca (ex.: scripts CLI) sem executar o dispatch HTTP.
+if (!defined('WASHIVIANA_SKIP_DISPATCH')) {
+
 header('Content-Type: application/json; charset=utf-8');
 
 // Verificar autenticação
@@ -44,6 +47,8 @@ switch ($action) {
     default:
         jsonResponse(['success' => false, 'message' => 'Ação não especificada']);
 }
+
+} // fim do dispatch HTTP
 
 function getLlmProviderByType($type) {
     $key = 'llm_' . $type . '_provider';
