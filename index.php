@@ -445,7 +445,7 @@ function routeFromConfigLink(string $link): string {
                                             <?php echo htmlspecialchars(t('hero.eyebrow', 'Tecnologia Criativa · IA · Design · Desenvolvimento')); ?>
                                         </p>
                                         <h1 class="text-neutral-800 text-4xl font-black leading-tight tracking-[-0.033em] @[480px]:text-5xl">
-                                            <?php echo htmlspecialchars($siteSubtitulo); ?>
+                                            <?php echo htmlspecialchars(t('hero.headline', 'Criando produtos digitais e experiências onde criatividade encontra tecnologia.')); ?>
                                         </h1>
                                         <p class="text-neutral-600 text-base font-normal leading-relaxed @[480px]:text-lg">
                                             <?php echo htmlspecialchars($fraseImpacto); ?>

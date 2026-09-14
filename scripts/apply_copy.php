@@ -37,9 +37,9 @@ function logLine(string $m): void {
 // ---------------------------------------------------------------------------
 $config = [
     'site_subtitulo' => [
-        'pt' => 'Criando produtos digitais e experiências onde criatividade encontra tecnologia.',
-        'en' => 'Building digital products and experiences where creativity meets technology.',
-        'es' => 'Creo productos y experiencias digitales donde la creatividad se encuentra con la tecnología.',
+        'pt' => 'Tech & IA com linguagem humana',
+        'en' => 'Tech & AI with a human touch',
+        'es' => 'Tech e IA con lenguaje humano',
     ],
     'home_frase_impacto' => [
         'pt' => 'Combino mais de 29 anos de experiência em design, motion, 3D e desenvolvimento de software com fluxos de trabalho assistidos por IA para criar soluções úteis, eficientes e centradas nas pessoas.',
@@ -58,6 +58,10 @@ $config = [
 // ---------------------------------------------------------------------------
 $ui = [
     // Home
+    'hero.headline' => [
+        'en' => 'Building digital products and experiences where creativity meets technology.',
+        'es' => 'Creo productos y experiencias digitales donde la creatividad se encuentra con la tecnología.',
+    ],
     'hero.eyebrow' => [
         'en' => 'Creative Technology · AI · Design · Development',
         'es' => 'Tecnología Creativa · IA · Diseño · Desarrollo',
