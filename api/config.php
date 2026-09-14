@@ -597,3 +597,16 @@ function deleteFile($filename) {
     return false;
 }
 
+/**
+ * Versao de um asset baseada no mtime do arquivo, para cache-busting estavel.
+ * Evita usar time() (que invalida o cache do navegador a cada request).
+ */
+function assetVersion(string $relativePath): string {
+    $relativePath = ltrim($relativePath, '/');
+    $full = __DIR__ . '/../' . $relativePath;
+    if (is_file($full)) {
+        return (string)filemtime($full);
+    }
+    return '1';
+}
+

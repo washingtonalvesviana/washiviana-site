@@ -143,6 +143,18 @@ if ($categoriaAtual) {
     <link rel="alternate" hreflang="en" href="<?php echo htmlspecialchars(BASE_URL . routeConteudos('en') . $qsLang); ?>">
     <link rel="alternate" hreflang="es" href="<?php echo htmlspecialchars(BASE_URL . routeConteudos('es') . $qsLang); ?>">
     <link rel="alternate" hreflang="x-default" href="<?php echo htmlspecialchars(BASE_URL . routeConteudos('pt') . $qsLang); ?>">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="<?php echo htmlspecialchars($siteTitulo); ?>">
+    <meta property="og:title" content="<?php echo htmlspecialchars($paginaTitulo . ' - ' . $siteTitulo); ?>">
+    <meta property="og:description" content="<?php echo htmlspecialchars('Artigos, notícias e insights sobre tecnologia, IA e automação por ' . $siteTitulo); ?>">
+    <meta property="og:url" content="<?php echo htmlspecialchars(BASE_URL . routeConteudos() . $qsLang); ?>">
+    <meta property="og:image" content="<?php echo htmlspecialchars(BASE_URL . '/assets/imgs/washi1.png'); ?>">
+    <meta property="og:image:width" content="1344">
+    <meta property="og:image:height" content="756">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<?php echo htmlspecialchars($paginaTitulo . ' - ' . $siteTitulo); ?>">
+    <meta name="twitter:description" content="<?php echo htmlspecialchars('Artigos, notícias e insights sobre tecnologia, IA e automação por ' . $siteTitulo); ?>">
+    <meta name="twitter:image" content="<?php echo htmlspecialchars(BASE_URL . '/assets/imgs/washi1.png'); ?>">
     <link rel="icon" type="image/png" href="<?php echo htmlspecialchars(BASE_URL . '/assets/imgs/favicon_washiviana.png'); ?>">
     <link rel="apple-touch-icon" href="<?php echo htmlspecialchars(BASE_URL . '/assets/imgs/favicon_washiviana.png'); ?>">
     

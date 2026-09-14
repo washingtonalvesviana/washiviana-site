@@ -62,6 +62,18 @@ $expertises = [
     <link rel="alternate" hreflang="en" href="<?php echo htmlspecialchars(BASE_URL . routeSobre('en')); ?>">
     <link rel="alternate" hreflang="es" href="<?php echo htmlspecialchars(BASE_URL . routeSobre('es')); ?>">
     <link rel="alternate" hreflang="x-default" href="<?php echo htmlspecialchars(BASE_URL . routeSobre('pt')); ?>">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="<?php echo htmlspecialchars($siteTitulo); ?>">
+    <meta property="og:title" content="<?php echo htmlspecialchars(t('page.about.title', 'Sobre') . ' - ' . $siteTitulo); ?>">
+    <meta property="og:description" content="<?php echo htmlspecialchars(t_params('page.about.meta_desc', 'Conheça mais sobre {name} - {subtitle}', ['name' => $siteTitulo, 'subtitle' => $siteSubtitulo])); ?>">
+    <meta property="og:url" content="<?php echo htmlspecialchars(BASE_URL . routeSobre()); ?>">
+    <meta property="og:image" content="<?php echo htmlspecialchars(BASE_URL . '/assets/imgs/washi1.png'); ?>">
+    <meta property="og:image:width" content="1344">
+    <meta property="og:image:height" content="756">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<?php echo htmlspecialchars(t('page.about.title', 'Sobre') . ' - ' . $siteTitulo); ?>">
+    <meta name="twitter:description" content="<?php echo htmlspecialchars(t_params('page.about.meta_desc', 'Conheça mais sobre {name} - {subtitle}', ['name' => $siteTitulo, 'subtitle' => $siteSubtitulo])); ?>">
+    <meta name="twitter:image" content="<?php echo htmlspecialchars(BASE_URL . '/assets/imgs/washi1.png'); ?>">
     <link rel="icon" type="image/png" href="<?php echo htmlspecialchars(BASE_URL . '/assets/imgs/favicon_washiviana.png'); ?>">
     <link rel="apple-touch-icon" href="<?php echo htmlspecialchars(BASE_URL . '/assets/imgs/favicon_washiviana.png'); ?>">
     

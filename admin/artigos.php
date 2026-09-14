@@ -139,7 +139,7 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conteúdos - Admin Washiviana</title>
-    <link rel="stylesheet" href="../assets/css/admin.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="../assets/css/admin.css?v=<?php echo assetVersion('assets/css/admin.css'); ?>">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
@@ -792,7 +792,7 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
                 </style>
                 
-                <script src="../assets/js/admin.js?v=<?php echo time(); ?>"></script>
+                <script src="../assets/js/admin.js?v=<?php echo assetVersion('assets/js/admin.js'); ?>"></script>
                 <script>
                 document.querySelectorAll('.form-tab').forEach(function(btn) {
                     btn.addEventListener('click', function() {

@@ -20,7 +20,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Radar - Admin Washiviana</title>
-    <link rel="stylesheet" href="../assets/css/admin.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="../assets/css/admin.css?v=<?php echo assetVersion('assets/css/admin.css'); ?>">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
@@ -324,7 +324,7 @@ try {
     </main>
 </div>
 
-<script src="../assets/js/admin.js?v=<?php echo time(); ?>"></script>
+<script src="../assets/js/admin.js?v=<?php echo assetVersion('assets/js/admin.js'); ?>"></script>
 <script>
     const csrfToken = <?php echo json_encode($_SESSION['csrf_token']); ?>;
 

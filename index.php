@@ -260,6 +260,18 @@ function routeFromConfigLink(string $link): string {
 	    <link rel="alternate" hreflang="en" href="<?php echo htmlspecialchars(BASE_URL . routeHome('en') . $qsLang); ?>">
 	    <link rel="alternate" hreflang="es" href="<?php echo htmlspecialchars(BASE_URL . routeHome('es') . $qsLang); ?>">
 	    <link rel="alternate" hreflang="x-default" href="<?php echo htmlspecialchars(BASE_URL . routeHome('pt') . $qsLang); ?>">
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="<?php echo htmlspecialchars($siteTitulo); ?>">
+        <meta property="og:title" content="<?php echo htmlspecialchars($siteTitulo . ' - ' . $siteSubtitulo); ?>">
+        <meta property="og:description" content="<?php echo htmlspecialchars($fraseImpacto); ?>">
+        <meta property="og:url" content="<?php echo htmlspecialchars($canonicalUrl); ?>">
+        <meta property="og:image" content="<?php echo htmlspecialchars(BASE_URL . '/assets/imgs/washi1.png'); ?>">
+        <meta property="og:image:width" content="1344">
+        <meta property="og:image:height" content="756">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="<?php echo htmlspecialchars($siteTitulo . ' - ' . $siteSubtitulo); ?>">
+        <meta name="twitter:description" content="<?php echo htmlspecialchars($fraseImpacto); ?>">
+        <meta name="twitter:image" content="<?php echo htmlspecialchars(BASE_URL . '/assets/imgs/washi1.png'); ?>">
         <link rel="icon" type="image/png" href="<?php echo htmlspecialchars(BASE_URL . '/assets/imgs/favicon_washiviana.png'); ?>">
         <link rel="apple-touch-icon" href="<?php echo htmlspecialchars(BASE_URL . '/assets/imgs/favicon_washiviana.png'); ?>">
     
@@ -276,7 +288,6 @@ function routeFromConfigLink(string $link): string {
     <link rel="dns-prefetch" href="//fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="dns-prefetch" href="//fonts.gstatic.com">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:wght@400;500;700;900&display=swap" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:wght@400;500;700;900&display=swap" media="print" onload="this.media='all'">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <noscript>
