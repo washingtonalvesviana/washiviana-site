@@ -116,6 +116,17 @@ O save path de sessão é criado automaticamente em `sys_get_temp_dir()/washivia
 - Encaminhe `*.php` para o PHP-FPM.
 - Rotas limpas (`/pt/...`, `/en/...`) são tratadas pelo `index.php` (front controller); configure `try_files` para o `index.php` quando o caminho não for um arquivo real.
 
+Habilite compressão de assets (por padrão o Nginx comprime apenas HTML):
+
+```nginx
+gzip on;
+gzip_vary on;
+gzip_proxied any;
+gzip_comp_level 6;
+gzip_min_length 256;
+gzip_types text/plain text/css application/json application/javascript application/x-javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml;
+```
+
 Bloqueie o acesso HTTP a caminhos sensíveis:
 
 ```nginx

@@ -267,7 +267,7 @@ if (!$schemaData) {
     <?php endif; ?>
 
     <!-- Tailwind CSS (build local) -->
-    <link rel="stylesheet" href="<?php echo htmlspecialchars(BASE_URL . '/assets/css/tailwind.min.css?v=1'); ?>">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars(BASE_URL . '/assets/css/tailwind.min.css?v=' . assetVersion('assets/css/tailwind.min.css')); ?>">
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

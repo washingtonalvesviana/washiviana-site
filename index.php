@@ -276,7 +276,7 @@ function routeFromConfigLink(string $link): string {
         <link rel="apple-touch-icon" href="<?php echo htmlspecialchars(BASE_URL . '/assets/imgs/favicon_washiviana.png'); ?>">
     
     <!-- Tailwind CSS (build local) -->
-    <link rel="stylesheet" href="<?php echo htmlspecialchars(BASE_URL . '/assets/css/tailwind.min.css?v=1'); ?>">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars(BASE_URL . '/assets/css/tailwind.min.css?v=' . assetVersion('assets/css/tailwind.min.css')); ?>">
     <link rel="preload" as="image"
           href="<?php echo htmlspecialchars(BASE_URL . '/assets/imgs/washi_4_no_bg-360.webp'); ?>"
           imagesrcset="<?php echo htmlspecialchars(BASE_URL . '/assets/imgs/washi_4_no_bg-280.webp'); ?> 280w, <?php echo htmlspecialchars(BASE_URL . '/assets/imgs/washi_4_no_bg-360.webp'); ?> 360w, <?php echo htmlspecialchars(BASE_URL . '/assets/imgs/washi_4_no_bg-420.webp'); ?> 420w"
@@ -469,7 +469,7 @@ function routeFromConfigLink(string $link): string {
 	                                            sizes="(min-width: 864px) 420px, (min-width: 480px) 360px, 280px"
 	                                        >
 	                                        <img
-	                                            src="<?php echo htmlspecialchars(BASE_URL . '/assets/imgs/washi_4_no_bg.png?v=1'); ?>"
+	                                            src="<?php echo htmlspecialchars(BASE_URL . '/assets/imgs/washi_4_no_bg.png?v=' . assetVersion('assets/imgs/washi_4_no_bg.png')); ?>"
 	                                            alt="Foto de <?php echo htmlspecialchars($siteTitulo); ?>"
 	                                            width="412" height="538"
 	                                            class="block w-[280px] @[480px]:w-[360px] @[864px]:w-[420px] max-w-full h-auto"
