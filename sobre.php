@@ -267,6 +267,31 @@ $expertises = [
                         </section>
                         
                         <!-- ========================================
+                             TECNOLOGIAS
+                        ========================================= -->
+                        <section>
+                            <h2 class="text-neutral-800 text-xl font-bold leading-tight tracking-[-0.015em] mb-6 text-center">
+                                <?php echo htmlspecialchars(t('about.tech.title', 'Tecnologias')); ?>
+                            </h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <?php
+                                $techGroups = [
+                                    ['t' => t('about.tech.ai.title', 'IA e automação'), 'd' => t('about.tech.ai.desc', 'LLMs locais · Engenharia de prompts · Automação de fluxos · Governança de dados · Fluxos de IA orientados à privacidade')],
+                                    ['t' => t('about.tech.dev.title', 'Desenvolvimento'), 'd' => t('about.tech.dev.desc', 'React · Next.js · TypeScript · Node.js · Python · APIs · PostgreSQL · WebSocket')],
+                                    ['t' => t('about.tech.creative.title', 'Tecnologia criativa'), 'd' => t('about.tech.creative.desc', 'Unity · C# · VR/AR · Meta Quest · Conteúdo 360° · Aplicações interativas')],
+                                    ['t' => t('about.tech.design.title', 'Design e mídia'), 'd' => t('about.tech.design.desc', 'UX/UI · Design gráfico · Motion design · Blender · Adobe Creative Cloud · After Effects · DaVinci Resolve · Figma')],
+                                    ['t' => t('about.tech.infra.title', 'Infraestrutura'), 'd' => t('about.tech.infra.desc', 'Docker · Kubernetes · GCP · Arquiteturas multi-tenant · Soluções com foco em segurança')],
+                                ];
+                                foreach ($techGroups as $g): ?>
+                                <div class="rounded-xl border border-neutral-200 bg-white p-5">
+                                    <h3 class="text-neutral-800 font-bold mb-1"><?php echo htmlspecialchars($g['t']); ?></h3>
+                                    <p class="text-neutral-600 text-sm leading-relaxed"><?php echo htmlspecialchars($g['d']); ?></p>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </section>
+                        
+                        <!-- ========================================
                              FILOSOFIA
                         ========================================= -->
                         <section class="bg-neutral-50 rounded-xl p-8 md:p-10 border border-neutral-200">

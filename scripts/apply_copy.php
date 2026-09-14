@@ -184,6 +184,43 @@ $ui = [
     'landing.design.card_3.desc' => ['en' => 'Experiences that combine 360° capture, spatial audio, real-time applications and physical interaction.', 'es' => 'Experiencias que combinan captura 360°, audio espacial, aplicaciones en tiempo real e interacción física.'],
     'landing.design.card_4.title' => ['en' => 'Creative engineering', 'es' => 'Ingeniería creativa'],
     'landing.design.card_4.desc' => ['en' => 'The connection between visual direction, software, hardware and the people using the experience.', 'es' => 'La conexión entre dirección visual, software, hardware y las personas que usan la experiencia.'],
+
+    // Projetos
+    'projects.page_title_all' => ['en' => 'Selected Projects', 'es' => 'Proyectos Seleccionados'],
+    'projects.intro' => [
+        'en' => 'These projects show how I move between creative direction, design and technical execution. Some began as communication challenges; others started as product or engineering problems. In each case, I worked to make the solution clear, usable and ready for the real context in which it would be used.',
+        'es' => 'Estos proyectos muestran cómo me muevo entre la dirección creativa, el diseño y la ejecución técnica. Algunos comenzaron como desafíos de comunicación; otros, como problemas de producto o de ingeniería. En cada caso, trabajé para que la solución fuera clara, usable y lista para el contexto real en el que se usaría.',
+    ],
+    'projects.label.1' => ['en' => 'AI & automation', 'es' => 'IA y automatización'],
+    'projects.label.2' => ['en' => 'Web and SaaS', 'es' => 'Web y SaaS'],
+    'projects.label.3' => ['en' => 'UX/UI', 'es' => 'UX/UI'],
+    'projects.label.4' => ['en' => '3D and motion', 'es' => '3D y motion'],
+    'projects.label.5' => ['en' => 'VR and 360° experiences', 'es' => 'VR y experiencias 360°'],
+    'projects.label.6' => ['en' => 'Audiovisual production', 'es' => 'Producción audiovisual'],
+    'projects.feat.title' => ['en' => 'Featured projects', 'es' => 'Proyectos destacados'],
+    'projects.feat.1.title' => ['en' => 'DataWise', 'es' => 'DataWise'],
+    'projects.feat.1.desc' => ['en' => 'An AI-enabled, multi-tenant SaaS platform designed to unify data, automate processes and let users interact with systems through natural language. I worked across product definition, UX/UI, full-stack architecture, AI modules, governance controls and deployment. A solo delivery reached a working platform in approximately four months, compared with an estimated six to nine months for a conventional team approach.', 'es' => 'Plataforma SaaS multi-tenant habilitada por IA, diseñada para unificar datos, automatizar procesos y permitir que los usuarios interactúen con los sistemas mediante lenguaje natural. Trabajé en la definición de producto, UX/UI, arquitectura full-stack, módulos de IA, controles de gobernanza y despliegue. Una entrega en solitario alcanzó una plataforma funcional en aproximadamente cuatro meses, frente a una estimación de seis a nueve meses con un equipo convencional.'],
+    'projects.feat.2.title' => ['en' => 'SEMAD | Goiás Parks VR', 'es' => 'SEMAD | Goiás Parks VR'],
+    'projects.feat.2.desc' => ['en' => 'An immersive 360° VR experience covering seven state parks in Goiás. The project combined field capture, spatial audio, 3D mascots, a local multi-headset application and synchronized sensory effects such as scent, wind, water and heat. The 30-day exhibition received more than 10,000 visitors.', 'es' => 'Experiencia inmersiva en VR 360° que abarca siete parques estatales de Goiás. El proyecto combinó captura en campo, audio espacial, mascotas 3D, una aplicación local multi-headset y efectos sensoriales sincronizados como aroma, viento, agua y calor. La exposición de 30 días recibió más de 10.000 visitantes.'],
+    'projects.feat.3.title' => ['en' => 'ABAL / COP30 — 3D Anamorphic Projection', 'es' => 'ABAL / COP30 — Proyección Anamórfica 3D'],
+    'projects.feat.3.desc' => ['en' => 'An anamorphic projection that translated aluminum production processes into a visual narrative for a large-scale event environment. I created the 3D and post-production pipeline with Blender, After Effects and DaVinci Resolve.', 'es' => 'Proyección anamórfica que tradujo procesos de producción de aluminio en una narrativa visual para un entorno de evento a gran escala. Creé el pipeline de 3D y postproducción con Blender, After Effects y DaVinci Resolve.'],
+    'projects.feat.4.title' => ['en' => 'Glowtech USA', 'es' => 'Glowtech USA'],
+    'projects.feat.4.desc' => ['en' => 'An integrated brand and digital experience for solar panels designed for golf carts. The work included brand identity, a 3D mascot, motion graphics, commercials, an SEO-focused website and an interactive mobile application with 3D visualization and energy simulation.', 'es' => 'Experiencia de marca y digital integrada para paneles solares diseñados para carritos de golf. El trabajo incluyó identidad de marca, una mascota 3D, motion graphics, comerciales, un sitio web enfocado en SEO y una aplicación móvil interactiva con visualización 3D y simulación de energía.'],
+    'projects.feat.5.title' => ['en' => 'Torcetex — Brand & Media', 'es' => 'Torcetex — Marca y Medios'],
+    'projects.feat.5.desc' => ['en' => 'A 12-year strategic partnership covering brand positioning, digital platforms, audiovisual production and communication for a textile company working with natural fibers and sustainability. This project represents long-term collaboration rather than a single delivery.', 'es' => 'Alianza estratégica de 12 años que abarca posicionamiento de marca, plataformas digitales, producción audiovisual y comunicación para una empresa textil que trabaja con fibras naturales y sostenibilidad. Este proyecto representa colaboración a largo plazo, y no una entrega aislada.'],
+
+    // Tecnologias (Sobre)
+    'about.tech.title' => ['en' => 'Technologies', 'es' => 'Tecnologías'],
+    'about.tech.ai.title' => ['en' => 'AI and automation', 'es' => 'IA y automatización'],
+    'about.tech.ai.desc' => ['en' => 'Local LLMs · Prompt engineering · Workflow automation · Data governance · Privacy-aware AI workflows', 'es' => 'LLMs locales · Ingeniería de prompts · Automatización de flujos · Gobernanza de datos · Flujos de IA con enfoque en privacidad'],
+    'about.tech.dev.title' => ['en' => 'Development', 'es' => 'Desarrollo'],
+    'about.tech.dev.desc' => ['en' => 'React · Next.js · TypeScript · Node.js · Python · APIs · PostgreSQL · WebSocket', 'es' => 'React · Next.js · TypeScript · Node.js · Python · APIs · PostgreSQL · WebSocket'],
+    'about.tech.creative.title' => ['en' => 'Creative technology', 'es' => 'Tecnología creativa'],
+    'about.tech.creative.desc' => ['en' => 'Unity · C# · VR/AR · Meta Quest · 360° content · Interactive applications', 'es' => 'Unity · C# · VR/AR · Meta Quest · Contenido 360° · Aplicaciones interactivas'],
+    'about.tech.design.title' => ['en' => 'Design and media', 'es' => 'Diseño y medios'],
+    'about.tech.design.desc' => ['en' => 'UX/UI · Graphic design · Motion design · Blender · Adobe Creative Cloud · After Effects · DaVinci Resolve · Figma', 'es' => 'UX/UI · Diseño gráfico · Motion design · Blender · Adobe Creative Cloud · After Effects · DaVinci Resolve · Figma'],
+    'about.tech.infra.title' => ['en' => 'Infrastructure', 'es' => 'Infraestructura'],
+    'about.tech.infra.desc' => ['en' => 'Docker · Kubernetes · GCP · Multi-tenant architectures · Security-conscious solution design', 'es' => 'Docker · Kubernetes · GCP · Arquitecturas multi-tenant · Soluciones con enfoque en seguridad'],
 ];
 
 $runConfig = true;

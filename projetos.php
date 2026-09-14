@@ -99,7 +99,7 @@ foreach ($projetos as &$projetoRow) {
 unset($projetoRow);
 
 // Título da página
-$paginaTitulo = t('projects.page_title_all', 'Todos os Projetos');
+$paginaTitulo = t('projects.page_title_all', 'Projetos Selecionados');
 if ($categoriaAtual) {
     $paginaTitulo = $categoriaAtual['nome'];
 } elseif ($tagSlug) {
@@ -243,6 +243,21 @@ if ($categoriaAtual) {
                                     );
                                 ?>
                             </p>
+                            <?php if (!$categoriaSlug && !$tagSlug): ?>
+                                <p class="text-neutral-600 text-base mt-3 max-w-2xl mx-auto leading-relaxed"><?php echo htmlspecialchars(t('projects.intro', 'Estes projetos mostram como transito entre direção criativa, design e execução técnica. Alguns começaram como desafios de comunicação; outros surgiram como problemas de produto ou de engenharia. Em cada caso, trabalhei para tornar a solução clara, utilizável e pronta para o contexto real em que seria usada.')); ?></p>
+                                <div class="flex flex-wrap gap-2 justify-center mt-5">
+                                    <?php foreach ([
+                                        t('projects.label.1', 'IA e automação'),
+                                        t('projects.label.2', 'Web e SaaS'),
+                                        t('projects.label.3', 'UX/UI'),
+                                        t('projects.label.4', '3D e motion'),
+                                        t('projects.label.5', 'VR e experiências 360°'),
+                                        t('projects.label.6', 'Produção audiovisual'),
+                                    ] as $label): ?>
+                                    <span class="px-3 py-1 rounded-full bg-neutral-100 text-neutral-700 text-xs font-medium border border-neutral-200"><?php echo htmlspecialchars($label); ?></span>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
                         </section>
                         
                         <!-- ========================================
@@ -351,6 +366,29 @@ if ($categoriaAtual) {
                             </div>
                             <?php endif; ?>
                         </section>
+
+                        <?php if (!$categoriaSlug && !$tagSlug): ?>
+                        <!-- Projetos em destaque -->
+                        <section class="px-4">
+                            <h2 class="text-neutral-800 text-2xl font-bold mb-6 text-center"><?php echo htmlspecialchars(t('projects.feat.title', 'Projetos em destaque')); ?></h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <?php
+                                $featured = [
+                                    ['t' => t('projects.feat.1.title', 'DataWise'), 'd' => t('projects.feat.1.desc', 'Plataforma SaaS multi-tenant habilitada por IA, projetada para unificar dados, automatizar processos e permitir que usuários interajam com sistemas por linguagem natural. Atuei na definição de produto, UX/UI, arquitetura full-stack, módulos de IA, controles de governança e implantação. Uma entrega solo alcançou uma plataforma funcional em aproximadamente quatro meses, frente a uma estimativa de seis a nove meses para uma abordagem convencional em equipe.')],
+                                    ['t' => t('projects.feat.2.title', 'SEMAD | Goiás Parks VR'), 'd' => t('projects.feat.2.desc', 'Experiência imersiva em VR 360° cobrindo sete parques estaduais de Goiás. O projeto combinou captação em campo, áudio espacial, mascotes 3D, aplicação local multi-headset e efeitos sensoriais sincronizados, como aroma, vento, água e calor. A exposição de 30 dias recebeu mais de 10.000 visitantes.')],
+                                    ['t' => t('projects.feat.3.title', 'ABAL / COP30 — Projeção Anamórfica 3D'), 'd' => t('projects.feat.3.desc', 'Projeção anamórfica que traduziu processos de produção de alumínio em uma narrativa visual para um ambiente de evento em grande escala. Criei o pipeline de 3D e pós-produção com Blender, After Effects e DaVinci Resolve.')],
+                                    ['t' => t('projects.feat.4.title', 'Glowtech USA'), 'd' => t('projects.feat.4.desc', 'Experiência de marca e digital integrada para painéis solares desenvolvidos para carrinhos de golfe. O trabalho incluiu identidade de marca, mascote 3D, motion graphics, comerciais, site com foco em SEO e um aplicativo móvel interativo com visualização 3D e simulação de energia.')],
+                                    ['t' => t('projects.feat.5.title', 'Torcetex — Marca e Mídia'), 'd' => t('projects.feat.5.desc', 'Parceria estratégica de 12 anos cobrindo posicionamento de marca, plataformas digitais, produção audiovisual e comunicação para uma empresa têxtil que trabalha com fibras naturais e sustentabilidade. Este projeto representa colaboração de longo prazo, e não uma entrega isolada.')],
+                                ];
+                                foreach ($featured as $f): ?>
+                                <div class="rounded-xl border border-neutral-200 bg-white p-6">
+                                    <h3 class="text-neutral-800 text-lg font-bold mb-2"><?php echo htmlspecialchars($f['t']); ?></h3>
+                                    <p class="text-neutral-600 text-sm leading-relaxed"><?php echo htmlspecialchars($f['d']); ?></p>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </section>
+                        <?php endif; ?>
                         
                     </main>
                     
