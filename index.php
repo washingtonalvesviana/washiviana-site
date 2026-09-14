@@ -441,6 +441,9 @@ function routeFromConfigLink(string $link): string {
                                 <!-- Texto -->
                                 <div class="flex flex-col gap-6 text-center @[864px]:text-left @[864px]:flex-1">
                                     <div class="flex flex-col gap-3">
+                                        <p class="text-primary text-sm font-bold uppercase tracking-[0.12em]">
+                                            <?php echo htmlspecialchars(t('hero.eyebrow', 'Tecnologia Criativa · IA · Design · Desenvolvimento')); ?>
+                                        </p>
                                         <h1 class="text-neutral-800 text-4xl font-black leading-tight tracking-[-0.033em] @[480px]:text-5xl">
                                             <?php echo htmlspecialchars($siteSubtitulo); ?>
                                         </h1>
@@ -449,11 +452,11 @@ function routeFromConfigLink(string $link): string {
                                         </p>
                                     </div>
                                     <div class="flex flex-wrap gap-3 justify-center @[864px]:justify-start">
-                                        <a href="<?php echo routeConteudos(); ?>" class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 px-5 @[480px]:h-12 @[480px]:px-6 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] @[480px]:text-base hover:bg-primary-dark transition-colors shadow-md hover:shadow-lg">
-	                                            <span><?php echo htmlspecialchars(t('hero.cta_contents', 'Explorar Conteúdos')); ?></span>
+                                        <a href="<?php echo routeProjetos(); ?>" class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 px-5 @[480px]:h-12 @[480px]:px-6 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] @[480px]:text-base hover:bg-primary-dark transition-colors shadow-md hover:shadow-lg">
+	                                            <span><?php echo htmlspecialchars(t('hero.cta_projects', 'Explorar projetos')); ?></span>
 	                                        </a>
-                                        <a href="<?php echo routeProjetos(); ?>" class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 px-5 @[480px]:h-12 @[480px]:px-6 bg-neutral-100 text-neutral-800 text-sm font-bold leading-normal tracking-[0.015em] @[480px]:text-base hover:bg-neutral-200 transition-colors border border-primary">
-	                                            <span><?php echo htmlspecialchars(t('hero.cta_projects', 'Ver Projetos')); ?></span>
+                                        <a href="<?php echo routeSobre(); ?>" class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 px-5 @[480px]:h-12 @[480px]:px-6 bg-neutral-100 text-neutral-800 text-sm font-bold leading-normal tracking-[0.015em] @[480px]:text-base hover:bg-neutral-200 transition-colors border border-primary">
+	                                            <span><?php echo htmlspecialchars(t('hero.cta_about', 'Sobre o meu trabalho')); ?></span>
 	                                        </a>
                                     </div>
                                 </div>

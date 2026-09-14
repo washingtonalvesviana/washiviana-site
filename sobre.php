@@ -212,8 +212,9 @@ $expertises = [
                                     </div>
                                     
                                     <div class="flex flex-col gap-4 text-neutral-600 text-base leading-relaxed">
-                                        <p><?php echo t('about.p1', 'Profissional criativo baseado em <strong class="text-neutral-800">Indaiatuba, SP - Brasil</strong>. Minha jornada tem sido moldada por experiências práticas do mundo real, indo além dos limites da teoria acadêmica. Ao longo de mais de uma década de carreira, mergulhei em diversos aspectos de várias disciplinas, forjando um caminho ancorado no conhecimento prático.'); ?></p>
-                                        <p><?php echo t('about.p2', 'Com fervor por <strong class="text-neutral-800">criatividade e tecnologia</strong>, explorei os domínios do design, desenvolvimento e inteligência artificial, guiado pela crença de que a verdadeira expertise é aprimorada através da prática e inovação. Meu background único me permitiu dominar um arsenal de habilidades que se entrelaçam perfeitamente, oferecendo valor inigualável para qualquer organização.'); ?></p>
+                                        <p><?php echo t('about.p1', 'Sou Creative Technologist e desenvolvedor de produtos com IA, com mais de 29 anos de experiência prática em design gráfico, motion design, 3D, UX/UI, produção audiovisual e desenvolvimento de software.'); ?></p>
+                                        <p><?php echo t('about.p2', 'Minha carreira começou na comunicação visual e avançou para produtos digitais, desenvolvimento web, aplicações interativas, Unity, realidade virtual e automação. Essa trajetória me permite analisar um projeto por mais de um ângulo: o que ele precisa comunicar, como será usado e como pode ser construído e mantido.'); ?></p>
+                                        <p><?php echo t('about.p3', 'Hoje, a inteligência artificial faz parte do meu fluxo de trabalho diário. Uso IA em pesquisa, planejamento, prototipação, programação, documentação, testes e tarefas repetitivas. Também crio minhas próprias ferramentas e fluxos quando uma solução pronta não atende ao problema.'); ?></p>
                                     </div>
                                 </div>
                             </div>
@@ -240,15 +241,41 @@ $expertises = [
                         </section>
                         
                         <!-- ========================================
+                             O QUE EU OFEREÇO
+                        ========================================= -->
+                        <section>
+                            <h2 class="text-neutral-800 text-xl font-bold leading-tight tracking-[-0.015em] mb-6 text-center">
+                                <?php echo htmlspecialchars(t('about.bring.title', 'O que eu ofereço')); ?>
+                            </h2>
+                            <div class="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <?php
+                                $aboutBring = [
+                                    t('about.bring.1', 'Visão de ponta a ponta, da ideia à entrega funcional'),
+                                    t('about.bring.2', 'Experiência conectando design, comunicação e software'),
+                                    t('about.bring.3', 'Fluxos assistidos por IA com revisão humana e controles práticos'),
+                                    t('about.bring.4', 'Criação de ferramentas reutilizáveis para reduzir tarefas repetitivas'),
+                                    t('about.bring.5', 'Comunicação clara com equipes técnicas e não técnicas'),
+                                    t('about.bring.6', 'Abordagem pragmática para qualidade, privacidade, segurança e entrega'),
+                                ];
+                                foreach ($aboutBring as $item): ?>
+                                <div class="flex items-start gap-3 rounded-lg border border-neutral-200 bg-white p-4">
+                                    <i class="ph ph-check-circle text-primary text-xl mt-0.5"></i>
+                                    <span class="text-neutral-600 text-sm leading-relaxed"><?php echo htmlspecialchars($item); ?></span>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </section>
+                        
+                        <!-- ========================================
                              FILOSOFIA
                         ========================================= -->
                         <section class="bg-neutral-50 rounded-xl p-8 md:p-10 border border-neutral-200">
                             <h2 class="text-neutral-800 text-xl font-bold leading-tight tracking-[-0.015em] mb-6 text-center">
-                                <?php echo htmlspecialchars(t('about.philosophy.title', 'Minha Filosofia')); ?>
+                                <?php echo htmlspecialchars(t('about.philosophy.title', 'Como eu trabalho')); ?>
                             </h2>
                             <div class="max-w-2xl mx-auto flex flex-col gap-5 text-neutral-600 text-base leading-relaxed">
-                                <p><?php echo t('about.philosophy.p1', '<strong class="text-neutral-800">Minha educação tem sido o próprio mercado,</strong> onde adaptabilidade, resolução de problemas e busca incansável pela excelência têm sido meus princípios orientadores. Como resultado, trago para a mesa um conjunto dinâmico de habilidades que engloba IA aplicada, automação, desenvolvimento, design e uma visão estratégica de tecnologia.'); ?></p>
-                                <p><?php echo t('about.philosophy.p2', '<strong class="text-neutral-800">O que realmente me diferencia</strong> é minha capacidade de aplicar esse conhecimento diverso de maneira prática e eficaz. Prospero em derrubar barreiras entre disciplinas, promovendo colaboração e impulsionando inovação a partir de um lugar de compreensão do mundo real.'); ?></p>
+                                <p><?php echo t('about.philosophy.p1', 'Uso IA como multiplicador de desempenho, não como substituta do julgamento profissional. Eu reviso, testo e adapto os resultados ao contexto real de cada projeto. Quando privacidade e controle de dados são importantes, prefiro modelos executados localmente e evito enviar informações sensíveis para serviços em nuvem.'); ?></p>
+                                <p><?php echo t('about.philosophy.p2', 'Meu trabalho inclui produtos SaaS com IA, sistemas de automação, aplicações web, UX/UI, motion graphics, 3D, conteúdo 360° e experiências de realidade virtual. Sou mais eficaz em projetos que precisam de alguém capaz de conectar direção criativa com execução técnica.'); ?></p>
                                 
                                 <blockquote class="bg-white border-l-4 border-primary px-6 py-5 rounded-r-lg text-neutral-700 italic mt-4">
                                     "<?php echo t('about.philosophy.quote', 'Seja revitalizando sua presença digital, implementando soluções de IA de ponta ou revolucionando seus processos com automação, estou aqui para trazer excelência prática para cada empreendimento. Vamos explorar as possibilidades ilimitadas juntos.'); ?>"
@@ -262,10 +289,10 @@ $expertises = [
                         <section class="bg-gradient-to-br from-primary to-primary-dark rounded-xl p-8 md:p-12 text-center text-white">
                             <div class="max-w-xl mx-auto flex flex-col items-center gap-6">
                                 <h2 class="text-2xl md:text-3xl font-bold leading-tight">
-                                    <?php echo htmlspecialchars(t('about.cta.title', 'Vamos Trabalhar Juntos?')); ?>
+                                    <?php echo htmlspecialchars(t('about.cta.title', 'Tem uma ideia complexa que precisa de pensamento criativo e técnico ao mesmo tempo?')); ?>
                                 </h2>
                                 <p class="text-white/90 text-base leading-relaxed">
-                                    <?php echo htmlspecialchars(t('about.cta.desc', 'Estou sempre aberto a novos projetos e oportunidades de colaboração. Entre em contato e vamos criar algo incrível.')); ?>
+                                    <?php echo htmlspecialchars(t('about.cta.desc', 'Fale comigo e vamos transformá-la em uma solução clara e funcional.')); ?>
                                 </p>
                                 <div class="flex flex-wrap gap-3 justify-center mt-2">
                                     <a href="mailto:<?php echo htmlspecialchars($siteEmail); ?>" class="flex items-center gap-2 min-w-[84px] cursor-pointer justify-center overflow-hidden rounded-lg h-12 px-6 bg-white text-primary text-base font-bold leading-normal hover:bg-neutral-100 transition-colors shadow-md">
