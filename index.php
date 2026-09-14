@@ -589,8 +589,9 @@ function routeFromConfigLink(string $link): string {
                         </section>
                         
                         <!-- ========================================
-                             SEÇÃO SOBRE - Mini Bio
+                             SEÇÃO SOBRE - Mini Bio (oculta temporariamente)
                         ========================================= -->
+                        <?php if (false): /* mini bio oculta temporariamente; troque para if (true) para reexibir */ ?>
                         <section class="mini-bio-card bg-neutral-50 rounded-xl p-8 md:p-12 border border-neutral-200">
                             <div class="mini-bio-layout max-w-2xl mx-auto">
 	                                <h2 class="text-neutral-800 text-2xl md:text-3xl font-bold leading-tight shrink-0">
@@ -603,6 +604,7 @@ function routeFromConfigLink(string $link): string {
                                 </div>
                             </div>
                         </section>
+                        <?php endif; /* fim da mini bio oculta */ ?>
                         <script>
                             document.addEventListener('DOMContentLoaded', function () {
                                 var bio = document.querySelector('.mini-bio-scroll');
