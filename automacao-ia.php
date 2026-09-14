@@ -16,7 +16,7 @@ $siteWhatsappLink = $siteWhatsappDigits ? ('https://wa.me/' . $siteWhatsappDigit
 $qsLang = !empty($_SERVER['QUERY_STRING']) ? ('?' . $_SERVER['QUERY_STRING']) : '';
 
 $paginaTitulo = t('landing.automation.title', 'Automação & IA');
-$paginaDescricao = t('landing.automation.desc', 'Aplicações reais de IA e automação para produtividade, processos e experiências digitais.');
+$paginaDescricao = t('landing.automation.desc', 'Uso IA e automação para reduzir tarefas repetitivas, melhorar a consistência e tornar processos complexos mais fáceis de entender. A tecnologia importa, mas o fluxo de trabalho criado ao redor dela importa tanto quanto.');
 
 // Verificar se tabela de artigos existe (PostgreSQL)
 $tabelaExiste = false;
@@ -167,6 +167,55 @@ if ($tabelaExiste) {
                             </p>
                         </section>
 
+                        <!-- Como uso IA -->
+                        <section class="px-4">
+                            <div class="rounded-xl border border-neutral-200 bg-white p-6 md:p-8">
+                                <h2 class="text-neutral-800 text-xl md:text-2xl font-bold mb-4"><?php echo htmlspecialchars(t('landing.automation.how_title', 'Como uso IA')); ?></h2>
+                                <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-neutral-600 text-base">
+                                    <?php foreach ([
+                                        t('landing.automation.how.1', 'Pesquisa e organização de informações'),
+                                        t('landing.automation.how.2', 'Arquitetura de produtos e sistemas'),
+                                        t('landing.automation.how.3', 'Prototipação e exploração de interfaces'),
+                                        t('landing.automation.how.4', 'Desenvolvimento e revisão de software'),
+                                        t('landing.automation.how.5', 'Documentação e comunicação técnica'),
+                                        t('landing.automation.how.6', 'Automação de fluxos e operações repetitivas'),
+                                        t('landing.automation.how.7', 'Testes, comparação e iteração'),
+                                    ] as $item): ?>
+                                    <li class="flex items-start gap-2"><i class="ph ph-check-circle text-primary text-lg mt-0.5"></i><span><?php echo htmlspecialchars($item); ?></span></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                                <p class="text-neutral-600 text-base mt-4"><?php echo htmlspecialchars(t('landing.automation.how_note', 'Não considero um resultado gerado por IA como trabalho final. Eu reviso, testo e adapto o conteúdo ao contexto do projeto.')); ?></p>
+                            </div>
+                        </section>
+
+                        <!-- Princípios de trabalho -->
+                        <section class="px-4">
+                            <h2 class="text-neutral-800 text-xl md:text-2xl font-bold mb-4 text-center"><?php echo htmlspecialchars(t('landing.automation.principles_title', 'Meus princípios de trabalho')); ?></h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <?php
+                                $principles = [
+                                    ['t' => t('landing.automation.prin.1.title', 'O julgamento humano permanece no processo.'), 'd' => t('landing.automation.prin.1.desc', 'A IA pode sugerir, comparar e acelerar. A responsabilidade pelo resultado continua sendo do profissional.')],
+                                    ['t' => t('landing.automation.prin.2.title', 'Privacidade faz parte do projeto.'), 'd' => t('landing.automation.prin.2.desc', 'Dados sensíveis não devem ser enviados a um modelo sem motivo claro, controles adequados e autorização necessária.')],
+                                    ['t' => t('landing.automation.prin.3.title', 'Automação precisa ser útil.'), 'd' => t('landing.automation.prin.3.desc', 'Automatizo quando isso reduz atrito, melhora a confiabilidade ou libera tempo para atividades que exigem julgamento.')],
+                                    ['t' => t('landing.automation.prin.4.title', 'Eficiência precisa ser medida.'), 'd' => t('landing.automation.prin.4.desc', 'Em fluxos adequados, trabalho com uma meta de redução de pelo menos 30% no esforço repetitivo. Resultados podem ser maiores em projetos específicos, mas não apresento um resultado isolado como promessa universal.')],
+                                ];
+                                foreach ($principles as $p): ?>
+                                <div class="rounded-xl border border-neutral-200 bg-white p-5">
+                                    <h3 class="text-neutral-800 font-bold mb-1"><?php echo htmlspecialchars($p['t']); ?></h3>
+                                    <p class="text-neutral-600 text-sm leading-relaxed"><?php echo htmlspecialchars($p['d']); ?></p>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </section>
+
+                        <!-- IA como multiplicador -->
+                        <section class="px-4">
+                            <div class="rounded-xl bg-neutral-50 border border-neutral-200 p-6 md:p-8 text-center">
+                                <h2 class="text-neutral-800 text-xl md:text-2xl font-bold mb-3"><?php echo htmlspecialchars(t('landing.automation.multiplier_title', 'IA como multiplicador de força')); ?></h2>
+                                <p class="text-neutral-600 text-base max-w-3xl mx-auto leading-relaxed"><?php echo htmlspecialchars(t('landing.automation.multiplier_desc', 'Minha vantagem não é apenas saber usar uma ferramenta de IA. É saber onde a IA ajuda, onde ela cria risco e onde a experiência continua sendo essencial. Anos de prática em design e desenvolvimento me ajudam a fazer perguntas melhores, identificar resultados fracos e tomar decisões que se ajustam ao projeto.')); ?></p>
+                            </div>
+                        </section>
+
                         <!-- Conteúdo -->
                         <section class="px-4">
                             <?php if (!$tabelaExiste): ?>
@@ -242,6 +291,17 @@ if ($tabelaExiste) {
                                     <?php endforeach; ?>
                                 </div>
                             <?php endif; ?>
+                        </section>
+
+                        <!-- CTA -->
+                        <section class="px-4">
+                            <div class="rounded-xl bg-gradient-to-br from-primary to-primary-dark p-8 md:p-12 text-center text-white">
+                                <h2 class="text-2xl md:text-3xl font-bold mb-4"><?php echo htmlspecialchars(t('landing.automation.cta', 'Procura automação prática ou um fluxo habilitado por IA? Vamos discutir o problema primeiro.')); ?></h2>
+                                <a href="mailto:<?php echo htmlspecialchars($siteEmail); ?>" class="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-white text-primary font-bold hover:bg-neutral-100 transition-colors">
+                                    <i class="ph ph-envelope-simple text-lg"></i>
+                                    <?php echo htmlspecialchars(t('nav.contact', 'Contato')); ?>
+                                </a>
+                            </div>
                         </section>
                     </main>
 

@@ -140,10 +140,54 @@ $ui = [
         'en' => 'Creative Technologist with 29+ years connecting design, development, AI-assisted workflows, automation, 3D, motion and immersive VR experiences.',
         'es' => 'Creative Technologist con 29+ años que conectan diseño, desarrollo, flujos asistidos por IA, automatización, 3D, motion y experiencias inmersivas de VR.',
     ],
+
+    // Automacao & IA
+    'landing.automation.desc' => [
+        'en' => 'I use AI and automation to remove repetitive work, improve consistency and make complex processes easier to understand. The technology matters, but the workflow around it matters just as much.',
+        'es' => 'Uso la IA y la automatización para eliminar trabajo repetitivo, mejorar la consistencia y hacer que los procesos complejos sean más fáciles de entender. La tecnología importa, pero el flujo de trabajo que se construye alrededor de ella importa igual.',
+    ],
+    'landing.automation.how_title' => ['en' => 'How I use AI', 'es' => 'Cómo uso la IA'],
+    'landing.automation.how.1' => ['en' => 'Research and information organization', 'es' => 'Investigación y organización de información'],
+    'landing.automation.how.2' => ['en' => 'Product and system architecture', 'es' => 'Arquitectura de productos y sistemas'],
+    'landing.automation.how.3' => ['en' => 'Prototyping and interface exploration', 'es' => 'Prototipado y exploración de interfaces'],
+    'landing.automation.how.4' => ['en' => 'Software development and code review', 'es' => 'Desarrollo y revisión de software'],
+    'landing.automation.how.5' => ['en' => 'Documentation and technical communication', 'es' => 'Documentación y comunicación técnica'],
+    'landing.automation.how.6' => ['en' => 'Workflow automation and repetitive operations', 'es' => 'Automatización de flujos y operaciones repetitivas'],
+    'landing.automation.how.7' => ['en' => 'Testing, comparison and iteration', 'es' => 'Pruebas, comparación e iteración'],
+    'landing.automation.how_note' => [
+        'en' => 'I do not treat generated output as finished work. I review, test and adapt it to the actual context of the project.',
+        'es' => 'No considero que un resultado generado por IA sea trabajo terminado. Lo reviso, lo pruebo y lo adapto al contexto del proyecto.',
+    ],
+    'landing.automation.principles_title' => ['en' => 'My working principles', 'es' => 'Mis principios de trabajo'],
+    'landing.automation.prin.1.title' => ['en' => 'Human judgment stays in the loop.', 'es' => 'El criterio humano permanece en el proceso.'],
+    'landing.automation.prin.1.desc' => ['en' => 'AI can suggest, compare and accelerate. Responsibility for the result remains with the professional.', 'es' => 'La IA puede sugerir, comparar y acelerar. La responsabilidad del resultado sigue siendo del profesional.'],
+    'landing.automation.prin.2.title' => ['en' => 'Privacy is part of the design.', 'es' => 'La privacidad forma parte del diseño.'],
+    'landing.automation.prin.2.desc' => ['en' => 'Sensitive data should not be sent to a model without a clear reason, adequate controls and the necessary authorization.', 'es' => 'Los datos sensibles no deben enviarse a un modelo sin una razón clara, controles adecuados y la autorización necesaria.'],
+    'landing.automation.prin.3.title' => ['en' => 'Automation should be useful.', 'es' => 'La automatización debe ser útil.'],
+    'landing.automation.prin.3.desc' => ['en' => 'I automate a process when it reduces friction, improves reliability or gives people more time for work that requires judgment.', 'es' => 'Automatizo un proceso cuando reduce la fricción, mejora la fiabilidad o libera tiempo para el trabajo que requiere criterio.'],
+    'landing.automation.prin.4.title' => ['en' => 'Efficiency must be measurable.', 'es' => 'La eficiencia debe ser medible.'],
+    'landing.automation.prin.4.desc' => ['en' => 'In suitable workflows, I work toward at least a 30% reduction in repetitive effort. Project-specific results may be higher, but I do not present one result as a universal promise.', 'es' => 'En flujos adecuados, trabajo con una meta de reducción de al menos un 30% del esfuerzo repetitivo. Los resultados pueden ser mayores en proyectos específicos, pero no presento un resultado aislado como promesa universal.'],
+    'landing.automation.multiplier_title' => ['en' => 'AI as a force multiplier', 'es' => 'La IA como multiplicador'],
+    'landing.automation.multiplier_desc' => ['en' => 'My advantage is not simply knowing how to use an AI tool. It is knowing where AI helps, where it creates risk and where experience is still essential. Years of design and development practice help me ask better questions, detect weak output and make decisions that fit the project.', 'es' => 'Mi ventaja no es solo saber usar una herramienta de IA. Es saber dónde ayuda la IA, dónde crea riesgo y dónde la experiencia sigue siendo esencial. Años de práctica en diseño y desarrollo me ayudan a hacer mejores preguntas, detectar resultados débiles y tomar decisiones que encajan con el proyecto.'],
+    'landing.automation.cta' => ['en' => 'Looking for practical automation or an AI-enabled workflow? Let us discuss the problem first.', 'es' => '¿Buscas automatización práctica o un flujo habilitado por IA? Hablemos primero del problema.'],
+
+    // Design & Experiencias
+    'landing.design.desc' => [
+        'en' => 'I design visual and interactive experiences that make information easier to understand and more memorable. My work spans UX/UI, motion, 3D, 360° content, virtual reality and interactive applications.',
+        'es' => 'Diseño experiencias visuales e interactivas que hacen que la información sea más fácil de entender y de recordar. Mi trabajo abarca UX/UI, motion, 3D, contenido 360°, realidad virtual y aplicaciones interactivas.',
+    ],
+    'landing.design.card_1.title' => ['en' => 'UX/UI and digital products', 'es' => 'UX/UI y productos digitales'],
+    'landing.design.card_1.desc' => ['en' => 'Interfaces that balance clarity, usability and technical constraints.', 'es' => 'Interfaces que equilibran claridad, usabilidad y limitaciones técnicas.'],
+    'landing.design.card_2.title' => ['en' => '3D and motion', 'es' => '3D y motion'],
+    'landing.design.card_2.desc' => ['en' => 'Visual narratives, product communication, animation and large-format projection.', 'es' => 'Narrativas visuales, comunicación de producto, animación y proyecciones de gran formato.'],
+    'landing.design.card_3.title' => ['en' => 'VR and immersive media', 'es' => 'VR y medios inmersivos'],
+    'landing.design.card_3.desc' => ['en' => 'Experiences that combine 360° capture, spatial audio, real-time applications and physical interaction.', 'es' => 'Experiencias que combinan captura 360°, audio espacial, aplicaciones en tiempo real e interacción física.'],
+    'landing.design.card_4.title' => ['en' => 'Creative engineering', 'es' => 'Ingeniería creativa'],
+    'landing.design.card_4.desc' => ['en' => 'The connection between visual direction, software, hardware and the people using the experience.', 'es' => 'La conexión entre dirección visual, software, hardware y las personas que usan la experiencia.'],
 ];
 
-$runConfig = ($all || $phaseArg === '1');
-$runUi = ($all || in_array($phaseArg, ['1'], true));
+$runConfig = true;
+$runUi = true;
 
 if (!$apply) {
     logLine('DRY-RUN (use --apply).');

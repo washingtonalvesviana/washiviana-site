@@ -16,7 +16,7 @@ $siteWhatsappLink = $siteWhatsappDigits ? ('https://wa.me/' . $siteWhatsappDigit
 $qsLang = !empty($_SERVER['QUERY_STRING']) ? ('?' . $_SERVER['QUERY_STRING']) : '';
 
 $paginaTitulo = t('landing.design.title', 'Design & Experiências Digitais');
-$paginaDescricao = t('landing.design.desc', 'VR, 3D, UI/UX e experiências interativas — projetos com foco em estética, usabilidade e impacto.');
+$paginaDescricao = t('landing.design.desc', 'Crio experiências visuais e interativas que tornam a informação mais fácil de entender e lembrar. Meu trabalho abrange UX/UI, motion, 3D, conteúdo 360°, realidade virtual e aplicações interativas.');
 
 // Forçar filtro por tag "design" (busca em título/descrição/tecnologias)
 $tagSlug = 'design';
@@ -162,6 +162,25 @@ try {
                             <p class="text-neutral-600 text-base mt-2">
                                 <?php echo htmlspecialchars($paginaDescricao); ?>
                             </p>
+                        </section>
+
+                        <!-- O que eu faço -->
+                        <section class="px-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+                                <?php
+                                $designCards = [
+                                    ['t' => t('landing.design.card_1.title', 'UX/UI e produtos digitais'), 'd' => t('landing.design.card_1.desc', 'Interfaces que equilibram clareza, usabilidade e limitações técnicas.')],
+                                    ['t' => t('landing.design.card_2.title', '3D e motion'), 'd' => t('landing.design.card_2.desc', 'Narrativas visuais, comunicação de produtos, animação e projeções de grande formato.')],
+                                    ['t' => t('landing.design.card_3.title', 'VR e mídia imersiva'), 'd' => t('landing.design.card_3.desc', 'Experiências que combinam captação 360°, áudio espacial, aplicações em tempo real e interação física.')],
+                                    ['t' => t('landing.design.card_4.title', 'Engenharia criativa'), 'd' => t('landing.design.card_4.desc', 'A conexão entre direção visual, software, hardware e as pessoas que usam a experiência.')],
+                                ];
+                                foreach ($designCards as $c): ?>
+                                <div class="rounded-xl border border-neutral-200 bg-white p-6">
+                                    <h3 class="text-neutral-800 text-lg font-bold mb-1"><?php echo htmlspecialchars($c['t']); ?></h3>
+                                    <p class="text-neutral-600 text-sm leading-relaxed"><?php echo htmlspecialchars($c['d']); ?></p>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
                         </section>
 
                         <!-- Grid -->
