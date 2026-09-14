@@ -390,6 +390,15 @@ try {
                                           placeholder="Token de acesso (gerado após autenticação OAuth)"><?php echo htmlspecialchars($linkedin['access_token'] ?? ''); ?></textarea>
                                 <small class="text-muted">Token com scope <code>w_member_social</code> (obrigatório para publicar)</small>
                             </div>
+
+                            <div class="form-group">
+                                <button type="button" class="btn btn-secondary" onclick="autenticarLinkedinOAuth()">
+                                    <i class="ph ph-linkedin-logo"></i> Conectar com LinkedIn (OAuth)
+                                </button>
+                                <small class="text-muted" style="display:block; margin-top:6px;">
+                                    Salva as credenciais acima e abre a autorização do LinkedIn. Após aprovar, o token e a validade são gravados automaticamente (requer a URL de callback cadastrada no app).
+                                </small>
+                            </div>
                             
                             <!-- Escolha onde publicar -->
                             <div class="form-group">
