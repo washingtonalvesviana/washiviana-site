@@ -18,14 +18,14 @@
   - **API Go de produção** em `127.0.0.1:8082` (systemd `washiviana-go-api.service`, `api-prod.env`, banco de produção). `/go-api/` do nginx agora aponta para `:8082`. Admin novo passa a operar sobre **dados de produção** (admin PHP permanece como fallback).
   - Staging mantido em `:8081` (usado pelos testes) — separado.
   - **Worker `publish-scheduled` migrado para Go** (systemd `washiviana-go-publish-scheduled.timer`, 1 min), com o timer PHP `washiviana-social-publish.timer` **desabilitado antes** (sem duplicação). Log mostra execução OK.
-  - `metrics`/`video` **seguem em PHP** (não migrados).
+  - `metrics` e `video` **migrados para Go** (timers PHP desabilitados); resta em PHP apenas `articles-publish` (publicação — depende de tokens).
 - [x] **(4) `COOKIE_SECURE=1`** definido no `api-prod.env` (produção HTTPS). Testes locais em HTTP seguem com a instância de staging (`COOKIE_SECURE=0`).
 - [ ] Publicação real em redes (LinkedIn/Meta) — depende de tokens OAuth válidos.
 
 ## Programa "eliminar o PHP" (em andamento)
 
 - [x] **(a) Worker `metrics` cortado para Go**: systemd `washiviana-go-metrics.{service,timer}` (6h) ativo; `washiviana-metrics.timer` (PHP) **desabilitado antes** (sem duplicação). Validado contra produção: chamou a API real do LinkedIn e tratou "token expirado" com graça (`fail`, sem crash).
-- [ ] (a) Worker `video` (executor FFmpeg + provedores) — **bloqueado por mídia/credenciais** para validar; hoje só `--dry-run`.
+- [x] (a) Worker **`video` em Go (FFmpeg) e CORTADO em produção**: `washiviana-go-video.{service,timer}` (1 min) ativo; `washiviana-video-worker.timer` (PHP) **desabilitado antes**. `video_worker_test.py` **5/5 PASS** (gera vídeo real a partir de imagem, grava `output_file`/`video_file` e limpa). Provedor de vídeo por IA fica gated (Go usa FFmpeg).
 - [x] (b, parcial) **Vídeos (fila)** → Go: `POST /api/v1/videos/enqueue` e `GET /api/v1/videos/jobs/{id}`. Divergência: sem auto-geração de imagens via script PHP (exige gerar imagens antes). `videos_beacon_test.py`.
 - [x] (b, parcial) **Beacon de métricas** → Go: `POST /api/v1/metrics/beacon` (same-origin + rate limit 60s por ip+path). `videos_beacon_test.py` **10/10 PASS**.
 - [x] (b, parcial) **Auth completo** → Go: `POST /api/v1/auth/change-password` (bcrypt, validações, invalida as outras sessões do usuário) e **`GET /api/v1/ai/gemini-models`** (lista modelos v1+v1beta, separa texto/imagem). `auth_models_test.py` **7/7 PASS** (senha alterada e RESTAURADA; chave Gemini restaurada).
@@ -51,7 +51,7 @@
   - ⚠️ **Bloqueado na execução**: o GitHub Actions não roda — **"account is locked due to a billing issue"** (billing do usuário). O workflow em si não tem erro.
   - Extra: **backup CSV** no delete de itens do radar (portado; `radar_test.py` cobre).
 
-> Workers ainda em PHP: `washiviana-articles-publish` (publicação agendada — depende de tokens) e `washiviana-video-worker`.
+> Workers em Go: `go-publish-scheduled`, `go-metrics`, `go-video`. Ainda em PHP: apenas `washiviana-articles-publish` (publicação no LinkedIn — depende de tokens).
 
 ## ⚠️ Bloqueio do e-mail de conclusão
 
@@ -184,7 +184,7 @@ RESULTADO: TUDO OK
 - [x] **Worker `metrics`** portado (`internal/metrics` + seleção + snapshots; `--rede=`, `--limit=`, `--dry-run`).
   - `metrics_worker_test.py` — **4/4 PASS** (dry-run lista elegíveis; rede sem coletor falha graciosamente **sem** chamadas externas e sem snapshot).
   - Fetchers LinkedIn/Instagram/Facebook portados de `metrics_lib.php` (não exercitados por exigirem tokens válidos).
-- [x] **Worker `video`**: *seam* seguro com `--dry-run` (lista `video_jobs` pendentes) e **execução real bloqueada** — `video_worker_test.py` **2/2 PASS**.
+- [x] **Worker `video` (Go/FFmpeg)**: `internal/video` porta o pipeline (segmentos com fade, concat, mix de música); cutover do timer feito. `video_worker_test.py` **5/5 PASS**.
   - **Executor de vídeo (FFmpeg + provedores externos) adiado**: portar 615 linhas de pipeline externo sem poder validar seria arriscado.
 - [ ] **Cutover de workers NÃO habilitado**: timers de produção continuam PHP. Procedimento seguro em `07` §13 (parar timer PHP antes de habilitar o Go).
 

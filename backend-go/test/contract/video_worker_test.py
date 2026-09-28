@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Teste do worker Go `video` (Fase 3d) — contra o STAGING.
+Teste do worker de vídeo Go (FFmpeg) — contra o STAGING.
 
-Valida a listagem de jobs pendentes (--dry-run) e que a execução real é BLOQUEADA
-(o executor de vídeo ainda não foi portado). Cleanup garantido.
+Cria um job real (com uma imagem existente de uploads), roda o worker, confere o
+vídeo gerado e limpa tudo. NUNCA apontar para produção.
 
 Uso: python3 backend-go/test/contract/video_worker_test.py
 """
@@ -18,6 +18,7 @@ REPO_ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 WORKER = os.environ.get("WORKER_BIN", "/home/washi/washiviana-go/washiviana-worker")
 ENV_FILE = os.environ.get("GO_ENV_FILE", "/home/washi/washiviana-go/api.env")
 STAGING_DB = os.environ.get("GO_DB_NAME", "washiviana_staging")
+UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "/var/www/washiviana.com/uploads")
 
 
 def load_db_creds():
@@ -50,10 +51,8 @@ HOST, PORT, USER, PASSWORD = load_db_creds()
 def psql(sql):
     env = dict(os.environ)
     env["PGPASSWORD"] = PASSWORD
-    out = subprocess.run(
-        ["psql", "-h", HOST, "-p", PORT, "-U", USER, "-d", STAGING_DB, "-tA", "-c", sql],
-        capture_output=True, text=True, env=env, timeout=30,
-    )
+    out = subprocess.run(["psql", "-h", HOST, "-p", PORT, "-U", USER, "-d", STAGING_DB, "-tA", "-c", sql],
+                         capture_output=True, text=True, env=env, timeout=30)
     if out.returncode != 0:
         raise RuntimeError("psql falhou: " + out.stderr.strip())
     text = out.stdout.strip()
@@ -65,26 +64,54 @@ def expect(name, cond, extra=""):
     return bool(cond)
 
 
+def pick_image():
+    for name in sorted(os.listdir(UPLOAD_DIR)):
+        if name.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+            return name
+    return None
+
+
 def main():
     ok = True
     env = load_worker_env()
-    variant_id = int(psql("SELECT id FROM artigos_social_variants ORDER BY id LIMIT 1;"))
+    img = pick_image()
+    if not img:
+        print("SKIP: nenhuma imagem em uploads/")
+        return 0
+
+    artigo_id = int(psql("SELECT id FROM artigos ORDER BY id LIMIT 1;"))
+    variant_id = None
     job_id = None
+    out_file = None
     try:
+        variant_id = int(psql(
+            "INSERT INTO artigos_social_variants (artigo_id, rede, caption, status, image_9x16) "
+            f"VALUES ({artigo_id}, 'zzvideo', 'ZZ Video Teste', 'rascunho', '{img}') RETURNING id;"))
         job_id = int(psql(
-            f"INSERT INTO video_jobs (variant_id, status, attempts) VALUES ({variant_id}, 'pending', 0) RETURNING id;"))
+            "INSERT INTO video_jobs (variant_id, status, attempts, params) "
+            f"VALUES ({variant_id}, 'pending', 0, '{{\"duration_per_image\":1,\"resolution\":\"1080x1920\"}}') RETURNING id;"))
 
-        out = subprocess.run([WORKER, "video", "--dry-run"], capture_output=True, text=True, env=env, timeout=60)
-        line = out.stdout.strip().splitlines()[-1]
+        out = subprocess.run([WORKER, "video"], capture_output=True, text=True, env=env, timeout=300)
+        line = out.stdout.strip().splitlines()[-1] if out.stdout.strip() else "{}"
         r = json.loads(line)
-        ok &= expect("video dry-run lista o job pendente",
-                     r.get("event") == "video_pending" and job_id in r.get("ids", []), r)
+        ok &= expect("worker processou o job", r.get("job_id") == job_id and r.get("status") == "success", r)
 
-        out = subprocess.run([WORKER, "video"], capture_output=True, text=True, env=env, timeout=60)
-        ok &= expect("execução real de vídeo bloqueada (exit != 0)", out.returncode != 0, out.returncode)
+        stt = psql(f"SELECT status FROM video_jobs WHERE id={job_id};")
+        ok &= expect("job status=success", stt == "success", stt)
+        out_file = psql(f"SELECT output_file FROM video_jobs WHERE id={job_id};")
+        ok &= expect("output_file gravado", bool(out_file) and out_file.endswith(".mp4"), out_file)
+        ok &= expect("arquivo de vídeo existe", bool(out_file) and os.path.isfile(os.path.join(UPLOAD_DIR, out_file)))
+        vf = psql(f"SELECT video_file FROM artigos_social_variants WHERE id={variant_id};")
+        ok &= expect("variante com video_file", vf == out_file, vf)
     finally:
+        if out_file:
+            p = os.path.join(UPLOAD_DIR, out_file)
+            if os.path.isfile(p):
+                os.remove(p)
         if job_id:
-            psql(f"DELETE FROM video_jobs WHERE id = {job_id};")
+            psql(f"DELETE FROM video_jobs WHERE id={job_id};")
+        if variant_id:
+            psql(f"DELETE FROM artigos_social_variants WHERE id={variant_id};")
 
     print()
     print("RESULTADO:", "TUDO OK" if ok else "FALHAS ENCONTRADAS")

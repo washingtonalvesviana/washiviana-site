@@ -20,6 +20,7 @@ import (
 	"washiviana/backend/internal/config"
 	"washiviana/backend/internal/metrics"
 	"washiviana/backend/internal/store"
+	"washiviana/backend/internal/video"
 )
 
 var version = "dev"
@@ -59,7 +60,7 @@ func main() {
 	case "metrics":
 		runMetrics(ctx, logger, st, os.Args[2:])
 	case "video":
-		runVideo(ctx, logger, st, os.Args[2:])
+		runVideo(ctx, logger, st, os.Args[2:], cfg.UploadDir)
 	default:
 		logger.Error("subcomando desconhecido", "cmd", cmd)
 		os.Exit(2)
@@ -108,27 +109,31 @@ func runMetrics(ctx context.Context, logger *slog.Logger, st *store.Store, args 
 	}
 }
 
-func runVideo(ctx context.Context, logger *slog.Logger, st *store.Store, args []string) {
+func runVideo(ctx context.Context, logger *slog.Logger, st *store.Store, args []string, uploadDir string) {
 	limit := argIntValue(args, "--limit=", 10)
 	dryRun := hasFlag(args, "--dry-run")
 
-	if !dryRun {
-		// Executor de vídeo (FFmpeg + provedores externos) ainda NÃO portado.
-		// Falha explícita para evitar qualquer processamento acidental.
-		logger.Error("executor de vídeo não implementado; rode com --dry-run")
-		os.Exit(2)
+	if dryRun {
+		jobs, err := st.ListVideoJobsPendentes(ctx, limit)
+		if err != nil {
+			logger.Error("listar video_jobs falhou", "error", err)
+			os.Exit(1)
+		}
+		ids := make([]int, 0, len(jobs))
+		for _, j := range jobs {
+			ids = append(ids, j.ID)
+		}
+		writeOut(map[string]any{"event": "video_pending", "count": len(jobs), "ids": ids})
+		return
 	}
 
-	jobs, err := st.ListVideoJobsPendentes(ctx, limit)
+	svc := video.New(st, video.Config{UploadDir: uploadDir}, func(msg string, _ ...any) { logger.Info(msg) })
+	jobID, status, err := svc.Process(ctx)
 	if err != nil {
-		logger.Error("listar video_jobs falhou", "error", err)
+		logger.Error("video worker", "error", err)
 		os.Exit(1)
 	}
-	ids := make([]int, 0, len(jobs))
-	for _, j := range jobs {
-		ids = append(ids, j.ID)
-	}
-	writeOut(map[string]any{"event": "video_pending", "count": len(jobs), "ids": ids})
+	writeOut(map[string]any{"event": "video", "job_id": jobID, "status": status})
 }
 
 func writeOut(v any) {
