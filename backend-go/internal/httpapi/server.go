@@ -22,6 +22,7 @@ import (
 	"washiviana/backend/internal/auth"
 	"washiviana/backend/internal/config"
 	"washiviana/backend/internal/i18n"
+	"washiviana/backend/internal/i18nsite"
 	"washiviana/backend/internal/store"
 	"washiviana/backend/internal/textutil"
 
@@ -36,18 +37,19 @@ const ctxKeySession ctxKey = "session"
 
 // Server expõe a API HTTP do backend Go.
 type Server struct {
-	cfg   config.Config
-	store *store.Store
-	auth  *auth.Service
-	ai    *ai.Service
-	i18n  *i18n.Service
-	log   *slog.Logger
+	cfg     config.Config
+	store   *store.Store
+	auth    *auth.Service
+	ai      *ai.Service
+	i18n    *i18n.Service
+	i18nSvc *i18nsite.Service
+	log     *slog.Logger
 }
 
 // New cria o servidor.
 func New(cfg config.Config, st *store.Store, authSvc *auth.Service, log *slog.Logger) *Server {
 	aiSvc := ai.New(st)
-	return &Server{cfg: cfg, store: st, auth: authSvc, ai: aiSvc, i18n: i18n.New(st, aiSvc), log: log}
+	return &Server{cfg: cfg, store: st, auth: authSvc, ai: aiSvc, i18n: i18n.New(st, aiSvc), i18nSvc: i18nsite.New(st, aiSvc), log: log}
 }
 
 // Routes registra as rotas.
@@ -117,6 +119,7 @@ func (s *Server) Routes() http.Handler {
 	// SEO/Traduções (escrita)
 	mux.HandleFunc("POST /api/v1/i18n/generate", s.writeGuard(s.handleI18nGenerate))
 	mux.HandleFunc("POST /api/v1/i18n/status", s.writeGuard(s.handleI18nStatus))
+	mux.HandleFunc("POST /api/v1/i18n/site", s.writeGuard(s.handleI18nSite))
 
 	// Upload de mídia
 	mux.HandleFunc("POST /api/v1/upload", s.writeGuard(s.handleUpload))
@@ -1924,6 +1927,30 @@ func (s *Server) handleI18nStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "Status atualizado.", "status": body.Status})
+}
+
+func (s *Server) handleI18nSite(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Langs []string `json:"langs"`
+	}
+	_ = json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&body)
+	langs := i18nsite.NormalizeLangs(body.Langs)
+
+	ctx, cancel := context.WithTimeout(r.Context(), 260*time.Second)
+	defer cancel()
+
+	res, err := s.i18nSvc.Generate(ctx, langs)
+	if err != nil {
+		s.fail(w, "gerar i18n site", err, "Erro ao gerar i18n do site.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success":          true,
+		"message":          "Traduções do site geradas.",
+		"saved_ui":         res.SavedUI,
+		"saved_config":     res.SavedConfig,
+		"saved_categories": map[string]any{},
+	})
 }
 
 // --- upload de mídia ---

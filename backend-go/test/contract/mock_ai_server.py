@@ -54,7 +54,15 @@ class Handler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             pass
 
-        if "SEO e tradução" in prompt or "gere versões em" in prompt:
+        import re as _re
+        lang_match = _re.search(r"para (pt|en|es)", prompt)
+        lang = lang_match.group(1) if lang_match else "en"
+
+        if "UI (PT-BR):" in prompt:
+            reply = json.dumps({"ui": {lang: {"nav.home": "Home", "nav.contents": "Contents"}}})
+        elif "CONFIG (PT-BR):" in prompt:
+            reply = json.dumps({"config": {lang: {"site_subtitulo": "Subtitle " + lang}}})
+        elif "SEO e tradução" in prompt or "gere versões em" in prompt:
             reply = json.dumps(i18n_payload())
         else:
             reply = "TEXTO_MOCK_OK"
