@@ -33,6 +33,9 @@ import (
 
 const sessionCookieName = "wv_go_sess"
 
+// siteLangs são os idiomas públicos suportados.
+var siteLangs = []string{"pt", "en", "es"}
+
 type ctxKey string
 
 const ctxKeySession ctxKey = "session"
@@ -125,8 +128,59 @@ func (s *Server) Routes() http.Handler {
 
 	// Beacon de acessos (público, same-origin)
 	mux.HandleFunc("POST /api/v1/metrics/beacon", s.handleMetricsBeacon)
+	mux.HandleFunc("POST /metrics/beacon", s.handleMetricsBeacon)
 
-	// Site público (strangler; sem cutover ainda)
+	// Site público nas rotas-raiz (cutover) — padrões explícitos por idioma.
+	mux.HandleFunc("GET /", s.handleSiteRoot)
+	mux.HandleFunc("GET /sitemap.xml", s.handleSiteSitemap)
+	mux.HandleFunc("GET /robots.txt", s.handleSiteRobots)
+	for _, l := range siteLangs {
+		lang := l
+		mux.HandleFunc("GET /"+lang, func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, "/"+lang+"/", http.StatusFound)
+		})
+		mux.HandleFunc("GET /"+lang+"/{$}", func(w http.ResponseWriter, r *http.Request) {
+			s.renderLang(w, r, lang, s.site.RenderHome)
+		})
+		mux.HandleFunc("GET /"+lang+"/conteudos", func(w http.ResponseWriter, r *http.Request) {
+			s.renderLang(w, r, lang, s.site.RenderConteudos)
+		})
+		mux.HandleFunc("GET /"+lang+"/projetos", func(w http.ResponseWriter, r *http.Request) {
+			s.renderLang(w, r, lang, s.site.RenderProjetos)
+		})
+		mux.HandleFunc("GET /"+lang+"/sobre", func(w http.ResponseWriter, r *http.Request) {
+			s.renderLang(w, r, lang, s.site.RenderSobre)
+		})
+		mux.HandleFunc("GET /"+lang+"/automacao-ia", func(w http.ResponseWriter, r *http.Request) {
+			s.renderLang(w, r, lang, func(ctx context.Context, lg string) (string, error) {
+				return s.site.RenderLanding(ctx, lg, "automacao")
+			})
+		})
+		mux.HandleFunc("GET /"+lang+"/tech-insights", func(w http.ResponseWriter, r *http.Request) {
+			s.renderLang(w, r, lang, func(ctx context.Context, lg string) (string, error) {
+				return s.site.RenderLanding(ctx, lg, "tech")
+			})
+		})
+		mux.HandleFunc("GET /"+lang+"/design-experiencias", func(w http.ResponseWriter, r *http.Request) {
+			s.renderLang(w, r, lang, func(ctx context.Context, lg string) (string, error) {
+				return s.site.RenderLanding(ctx, lg, "design")
+			})
+		})
+		mux.HandleFunc("GET /"+lang+"/artigo/{slug}", func(w http.ResponseWriter, r *http.Request) {
+			slug := r.PathValue("slug")
+			s.renderLang(w, r, lang, func(ctx context.Context, lg string) (string, error) {
+				return s.site.RenderArtigo(ctx, lg, slug)
+			})
+		})
+		mux.HandleFunc("GET /"+lang+"/projeto/{slug}", func(w http.ResponseWriter, r *http.Request) {
+			slug := r.PathValue("slug")
+			s.renderLang(w, r, lang, func(ctx context.Context, lg string) (string, error) {
+				return s.site.RenderProjeto(ctx, lg, slug)
+			})
+		})
+	}
+
+	// Site público (strangler; mantido para testes internos)
 	mux.HandleFunc("GET /site", s.handleSiteRoot)
 	mux.HandleFunc("GET /site/", s.handleSiteRoot)
 	mux.HandleFunc("GET /site/{lang}/", s.handleSiteHome)
@@ -1684,7 +1738,12 @@ func (s *Server) handleRedeSave(w http.ResponseWriter, r *http.Request) {
 // --- site público (strangler) ---
 
 func (s *Server) handleSiteRoot(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/site/pt/", http.StatusFound)
+	// Na raiz "/" redireciona para /pt/; em "/site" mantém compatibilidade interna.
+	target := "/pt/"
+	if strings.HasPrefix(r.URL.Path, "/site") {
+		target = "/site/pt/"
+	}
+	http.Redirect(w, r, target, http.StatusFound)
 }
 
 func (s *Server) handleSiteHome(w http.ResponseWriter, r *http.Request) {
@@ -1700,6 +1759,22 @@ func (s *Server) handleSiteHome(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(body))
+}
+
+func (s *Server) renderLang(w http.ResponseWriter, r *http.Request, lang string, render func(context.Context, string) (string, error)) {
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+	body, err := render(ctx, lang)
+	if err != nil {
+		if errors.Is(err, site.ErrNotFound) {
+			s.writeHTML(w, http.StatusNotFound, "<!doctype html><meta charset=utf-8><h1>404</h1><p>Não encontrado.</p>")
+			return
+		}
+		s.log.Error("render site", "error", err)
+		http.Error(w, "Erro ao renderizar a página.", http.StatusInternalServerError)
+		return
+	}
+	s.writeHTML(w, http.StatusOK, body)
 }
 
 func (s *Server) writeHTML(w http.ResponseWriter, status int, body string) {

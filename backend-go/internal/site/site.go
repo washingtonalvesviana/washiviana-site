@@ -239,8 +239,14 @@ func (s *Service) RenderHome(ctx context.Context, lang string) (string, error) {
 	b.WriteString("<span class=\"flex gap-4\">" + strings.Join(social, "") + "</span>\n")
 	b.WriteString("</div></footer>\n")
 
+	b.WriteString(beaconScript())
 	b.WriteString("</body></html>\n")
 	return b.String(), nil
+}
+
+// beaconScript registra o acesso no backend Go (same-origin).
+func beaconScript() string {
+	return "<script>(function(){try{fetch('/metrics/beacon',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({path:location.pathname,ua:navigator.userAgent})}).catch(function(){});}catch(e){}})();</script>\n"
 }
 
 func nav(lang, path, label string) string {
@@ -360,7 +366,9 @@ func (s *Service) shell(lang string, p *pageCtx, title, description, canonicalPa
 	b.WriteString("<main class=\"max-w-5xl mx-auto px-4 py-10\">\n" + inner + "</main>\n")
 	b.WriteString("<footer class=\"border-t border-neutral-200 mt-10\">\n<div class=\"max-w-5xl mx-auto px-4 py-8 text-sm text-neutral-600\">")
 	b.WriteString("<a class=\"hover:underline\" href=\"/site/" + lang + "/\">" + esc(p.titulo) + "</a> — " + esc(p.t("footer.rights")))
-	b.WriteString("</div></footer>\n</body></html>\n")
+	b.WriteString("</div></footer>\n")
+	b.WriteString(beaconScript())
+	b.WriteString("</body></html>\n")
 	return b.String()
 }
 
