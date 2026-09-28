@@ -21,10 +21,10 @@ type User struct {
 
 // Session representa uma sessão do backend Go (tabela sessions).
 type Session struct {
-	ID         string
-	UserID     int
-	CSRFToken  string
-	ExpiresAt  time.Time
+	ID        string
+	UserID    int
+	CSRFToken string
+	ExpiresAt time.Time
 }
 
 // GetUserByEmail busca usuário por e-mail.
@@ -88,6 +88,21 @@ func (s *Store) GetSessionByTokenHash(ctx context.Context, tokenHash string) (*S
 func (s *Store) DeleteSessionByTokenHash(ctx context.Context, tokenHash string) error {
 	_, err := s.pool.Exec(ctx, "DELETE FROM sessions WHERE token_hash = $1", tokenHash)
 	return err
+}
+
+// UpdateUserPassword troca o hash da senha do usuário.
+func (s *Store) UpdateUserPassword(ctx context.Context, userID int, hash string) error {
+	_, err := s.pool.Exec(ctx, "UPDATE usuarios SET senha = $1 WHERE id = $2", hash, userID)
+	return err
+}
+
+// DeleteOtherSessions invalida as demais sessões do usuário (mantém a atual).
+func (s *Store) DeleteOtherSessions(ctx context.Context, userID int, currentTokenHash string) (int64, error) {
+	tag, err := s.pool.Exec(ctx, "DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2", userID, currentTokenHash)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
 }
 
 // DeleteExpiredSessions limpa sessões expiradas (manutenção).

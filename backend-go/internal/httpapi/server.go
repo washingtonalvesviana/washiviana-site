@@ -24,6 +24,8 @@ import (
 	"washiviana/backend/internal/i18n"
 	"washiviana/backend/internal/store"
 	"washiviana/backend/internal/textutil"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 const sessionCookieName = "wv_go_sess"
@@ -57,6 +59,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/v1/auth/login", s.handleLogin)
 	mux.HandleFunc("POST /api/v1/auth/logout", s.handleLogout)
 	mux.HandleFunc("GET /api/v1/auth/me", s.handleMe)
+	mux.HandleFunc("POST /api/v1/auth/change-password", s.writeGuard(s.handleChangePassword))
 
 	// Categorias (leitura)
 	mux.HandleFunc("GET /api/v1/categorias", s.handleCategorias)
@@ -98,6 +101,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/v1/ai/article", s.writeGuard(s.handleAIArticle))
 	mux.HandleFunc("POST /api/v1/ai/image", s.writeGuard(s.handleAIImage))
 	mux.HandleFunc("POST /api/v1/ai/social-agent", s.writeGuard(s.handleAISocialAgent))
+	mux.HandleFunc("GET /api/v1/ai/gemini-models", s.handleGeminiModels)
 
 	// Redes sociais (config)
 	mux.HandleFunc("GET /api/v1/redes-sociais", s.handleRedesList)
@@ -300,6 +304,66 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 func isLoopback(r *http.Request) bool {
 	ip := net.ParseIP(clientIP(r))
 	return ip != nil && ip.IsLoopback()
+}
+
+func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
+	info := sessionFrom(r)
+	if info == nil || info.User == nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]any{"success": false, "message": "Não autorizado."})
+		return
+	}
+	var body struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+		Password        string `json:"password"`
+		ConfirmPassword string `json:"confirm_password"`
+	}
+	if !s.decodeJSON(w, r, &body) {
+		return
+	}
+	if body.NewPassword == "" {
+		body.NewPassword = body.Password
+	}
+	if body.CurrentPassword == "" || body.NewPassword == "" || body.ConfirmPassword == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "Preencha todos os campos."})
+		return
+	}
+	if body.NewPassword != body.ConfirmPassword {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "A confirmação não confere com a nova senha."})
+		return
+	}
+	if len(body.NewPassword) < 8 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "A nova senha deve ter ao menos 8 caracteres."})
+		return
+	}
+	if body.NewPassword == body.CurrentPassword {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "A nova senha deve ser diferente da atual."})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	defer cancel()
+
+	user, err := s.store.GetUserByID(ctx, info.User.ID)
+	if err != nil {
+		s.fail(w, "change password user", err, "Erro ao alterar senha.")
+		return
+	}
+	if bcrypt.CompareHashAndPassword([]byte(user.Senha), []byte(body.CurrentPassword)) != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]any{"success": false, "message": "Senha atual incorreta."})
+		return
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(body.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		s.fail(w, "change password hash", err, "Erro ao alterar senha.")
+		return
+	}
+	if err := s.store.UpdateUserPassword(ctx, info.User.ID, string(hash)); err != nil {
+		s.fail(w, "change password update", err, "Erro ao alterar senha.")
+		return
+	}
+	_, _ = s.store.DeleteOtherSessions(ctx, info.User.ID, auth.HashToken(sessionToken(r)))
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "Senha alterada com sucesso."})
 }
 
 func clientIP(r *http.Request) string {
@@ -1493,6 +1557,35 @@ func (s *Server) handleAISocialAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"success": true, "text": text, "chars_gerados": len(text)})
+}
+
+func (s *Server) handleGeminiModels(w http.ResponseWriter, r *http.Request) {
+	key := strings.TrimSpace(r.URL.Query().Get("api_key"))
+	ctx, cancel := context.WithTimeout(r.Context(), 40*time.Second)
+	defer cancel()
+
+	if key == "" {
+		cfg, err := s.store.GetConfiguracoes(ctx, []string{"gemini_api_key"})
+		if err == nil {
+			key = strings.TrimSpace(cfg["gemini_api_key"])
+		}
+	}
+	if key == "" {
+		writeJSON(w, http.StatusOK, map[string]any{"success": false, "message": "API Key não configurada"})
+		return
+	}
+	text, image, total, err := s.ai.GeminiModels(ctx, key)
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"success": false, "message": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success":              true,
+		"textModels":           text,
+		"imageModels":          image,
+		"imageModelsAvailable": len(image) > 0,
+		"totalModels":          total,
+	})
 }
 
 // --- redes sociais (config) ---

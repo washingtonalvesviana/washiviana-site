@@ -28,7 +28,8 @@
 - [ ] (a) Worker `video` (executor FFmpeg + provedores) — **bloqueado por mídia/credenciais** para validar; hoje só `--dry-run`.
 - [x] (b, parcial) **Vídeos (fila)** → Go: `POST /api/v1/videos/enqueue` e `GET /api/v1/videos/jobs/{id}`. Divergência: sem auto-geração de imagens via script PHP (exige gerar imagens antes). `videos_beacon_test.py`.
 - [x] (b, parcial) **Beacon de métricas** → Go: `POST /api/v1/metrics/beacon` (same-origin + rate limit 60s por ip+path). `videos_beacon_test.py` **10/10 PASS**.
-- [ ] (b) Demais endpoints → Go: auth.php legado, i18n_site, radar (+ radar_lib), linkedin/facebook/instagram, oauth callbacks (`linkedin-callback.php`, `oauth_callback.php`), gemini-models e publicação (gated).
+- [x] (b, parcial) **Auth completo** → Go: `POST /api/v1/auth/change-password` (bcrypt, validações, invalida as outras sessões do usuário) e **`GET /api/v1/ai/gemini-models`** (lista modelos v1+v1beta, separa texto/imagem). `auth_models_test.py` **7/7 PASS** (senha alterada e RESTAURADA; chave Gemini restaurada).
+- [ ] (b) Demais endpoints → Go: i18n_site, radar (+ radar_lib), linkedin/facebook/instagram, oauth callbacks (`linkedin-callback.php`, `oauth_callback.php`) e publicação (gated).
 - [ ] (c) Site público → Go/Next.js (strangler) — **próximo grande bloco**.
 - [ ] (d) Aposentar admin/site PHP após paridade.
 - [ ] (e) Otimização de imagem (GD) + `generate_images_multi` (1:1/9:16).

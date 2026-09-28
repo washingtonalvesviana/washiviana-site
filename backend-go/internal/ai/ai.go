@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -301,6 +302,81 @@ func (s *Service) generateWithProvider(ctx context.Context, cfg map[string]strin
 		return s.geminiGenerate(ctx, model, prompt, maxTokens, key)
 	}
 	return "", fmt.Errorf("provedor não suportado para texto")
+}
+
+// ModelInfo descreve um modelo listado.
+type ModelInfo struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+// GeminiModels lista modelos do Gemini (v1 + v1beta), separando texto e imagem.
+func (s *Service) GeminiModels(ctx context.Context, apiKey string) (text, image []ModelInfo, total int, err error) {
+	seen := map[string]map[string]any{}
+	for _, base := range []string{"https://generativelanguage.googleapis.com/v1/models?key=", "https://generativelanguage.googleapis.com/v1beta/models?key="} {
+		status, body, gerr := s.getJSON(ctx, base+url.QueryEscape(apiKey), nil)
+		if gerr != nil || status != 200 {
+			continue
+		}
+		var d struct {
+			Models []map[string]any `json:"models"`
+		}
+		if json.Unmarshal(body, &d) != nil {
+			continue
+		}
+		for _, m := range d.Models {
+			name, _ := m["name"].(string)
+			id := strings.TrimPrefix(name, "models/")
+			if id == "" {
+				continue
+			}
+			if _, ok := seen[id]; !ok {
+				seen[id] = m
+			}
+		}
+	}
+	if len(seen) == 0 {
+		return nil, nil, 0, fmt.Errorf("Resposta inválida da API ou chave sem modelos disponíveis")
+	}
+	text = []ModelInfo{}
+	image = []ModelInfo{}
+	for id, m := range seen {
+		name, _ := m["name"].(string)
+		displayName, _ := m["displayName"].(string)
+		if displayName == "" {
+			displayName = name
+		}
+		description, _ := m["description"].(string)
+		info := ModelInfo{ID: id, Name: displayName, Description: description}
+
+		if strings.Contains(id, "gemini") && !strings.Contains(id, "embedding") {
+			if methodsContains(m["supportedGenerationMethods"], "generateContent") {
+				text = append(text, info)
+			}
+		}
+		lowerID := strings.ToLower(id)
+		lowerDisp := strings.ToLower(displayName)
+		if strings.Contains(lowerID, "imagen") || strings.Contains(lowerID, "image") || strings.Contains(lowerDisp, "image") {
+			image = append(image, info)
+		}
+	}
+	sort.Slice(text, func(i, j int) bool { return text[i].ID > text[j].ID })
+	sort.Slice(image, func(i, j int) bool { return image[i].ID > image[j].ID })
+	return text, image, len(seen), nil
+}
+
+func methodsContains(v any, want string) bool {
+	arr, ok := v.([]any)
+	if !ok {
+		return false
+	}
+	for _, item := range arr {
+		if s, ok := item.(string); ok && s == want {
+			return true
+		}
+	}
+	return false
 }
 
 // GenerateSocialAgent gera a legenda de rede social (porta gerarSocialAgent).
@@ -777,6 +853,23 @@ func (s *Service) geminiGenerate(ctx context.Context, model, prompt string, maxT
 		return "", fmt.Errorf("a IA não retornou texto")
 	}
 	return text, nil
+}
+
+func (s *Service) getJSON(ctx context.Context, rawURL string, headers map[string]string) (int, []byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return 0, nil, err
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	resp, err := s.http.Do(req)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	return resp.StatusCode, body, nil
 }
 
 func (s *Service) postJSON(ctx context.Context, rawURL string, payload any, headers map[string]string) ([]byte, error) {
