@@ -76,6 +76,7 @@ try {
         'sentry_dsn',
         // Manter compatibilidade com OpenAI (caso volte a usar)
         'openai_api_key',
+        'openai_base_url',
         'openai_model',
         'openai_max_tokens'
     ];

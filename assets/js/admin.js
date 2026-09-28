@@ -246,6 +246,7 @@ function carregarModelosLLM() {
     };
 
     const ollamaBaseUrl = String(document.getElementById('ollama_base_url')?.value || '').trim();
+    const openaiBaseUrl = String(document.getElementById('openai_base_url')?.value || '').trim();
 
     const selectedProviders = [provider, providerForImage, providerForVideo]
         .filter((v, idx, arr) => arr.indexOf(v) === idx);
@@ -288,6 +289,7 @@ function carregarModelosLLM() {
         const apiKey = apiKeyInput ? String(apiKeyInput.value || '').trim() : '';
         if (apiKey) params.append('api_key', apiKey);
         if (ollamaBaseUrl) params.append('ollama_base_url', ollamaBaseUrl);
+        if (openaiBaseUrl) params.append('openai_base_url', openaiBaseUrl);
         return fetch('../api/llm-models.php?' + params.toString()).then(response => response.json());
     };
 
@@ -430,9 +432,11 @@ function fetchProviderModels(providerName) {
     const params = new URLSearchParams({ provider: providerName });
     const keyVal = String(document.getElementById(cfg.keyField)?.value || '').trim();
     const ollamaBaseUrl = String(document.getElementById('ollama_base_url')?.value || '').trim();
+    const openaiBaseUrl = String(document.getElementById('openai_base_url')?.value || '').trim();
 
     if (keyVal) params.append('api_key', keyVal);
     if (ollamaBaseUrl) params.append('ollama_base_url', ollamaBaseUrl);
+    if (openaiBaseUrl) params.append('openai_base_url', openaiBaseUrl);
 
     return fetch('../api/llm-models.php?' + params.toString())
         .then(response => response.json())
@@ -1931,3 +1935,76 @@ function deletarCategoriaArtigo(id) {
             messageDiv.textContent = '❌ Erro de conexão: ' + err.message;
         });
 }
+
+/**
+ * GLOBAL LOADING INDICATOR
+ * Spinner discreto exibido automaticamente durante qualquer requisição assíncrona.
+ * Uso manual: WVLoading.show() / WVLoading.hide()
+ */
+const WVLoading = (function () {
+    let active = 0;
+    let showTimer = null;
+    let el = null;
+
+    function ensureEl() {
+        if (el) return el;
+        if (!document.body) return null;
+        el = document.createElement('div');
+        el.id = 'wvGlobalLoading';
+        el.className = 'wv-global-loading';
+        el.setAttribute('role', 'status');
+        el.setAttribute('aria-live', 'polite');
+        el.innerHTML = '<span class="spinner"></span><span class="wv-global-loading__text">Processando...</span>';
+        el.style.display = 'none';
+        document.body.appendChild(el);
+        return el;
+    }
+
+    function show() {
+        if (!ensureEl()) return;
+        if (showTimer) return;
+        showTimer = setTimeout(function () {
+            showTimer = null;
+            if (active > 0 && el) el.style.display = 'inline-flex';
+        }, 150);
+    }
+
+    function hide() {
+        if (showTimer) { clearTimeout(showTimer); showTimer = null; }
+        if (el) el.style.display = 'none';
+    }
+
+    function begin() { active++; show(); }
+    function end() {
+        active = Math.max(0, active - 1);
+        if (active === 0) hide();
+    }
+
+    return {
+        begin: begin,
+        end: end,
+        show: function () { active++; show(); },
+        hide: function () { active = 0; hide(); },
+        activeCount: function () { return active; }
+    };
+})();
+
+(function patchGlobalFetch() {
+    if (typeof window.fetch !== 'function' || window.fetch.__wvPatched) return;
+    const originalFetch = window.fetch.bind(window);
+    const wrappedFetch = function () {
+        WVLoading.begin();
+        let result;
+        try {
+            result = originalFetch.apply(this, arguments);
+        } catch (err) {
+            WVLoading.end();
+            throw err;
+        }
+        return Promise.resolve(result).finally(function () {
+            WVLoading.end();
+        });
+    };
+    wrappedFetch.__wvPatched = true;
+    window.fetch = wrappedFetch;
+})();

@@ -14,6 +14,9 @@ while ($row = $stmt->fetch()) {
 
 // Valores padrão se não existirem
 $linkedin = $redes['linkedin'] ?? ['ativo' => false, 'client_id' => '', 'client_secret' => '', 'access_token' => '', 'person_urn' => ''];
+$linkedinTokenExpiresAt = $linkedin['token_expires_at'] ?? null;
+$linkedinExpired = !empty($linkedinTokenExpiresAt) && strtotime((string)$linkedinTokenExpiresAt) < time();
+$linkedinExpiresLabel = !empty($linkedinTokenExpiresAt) ? date('d/m/Y H:i', strtotime((string)$linkedinTokenExpiresAt)) : '';
 $instagram = $redes['instagram'] ?? ['ativo' => false, 'client_id' => '', 'client_secret' => '', 'access_token' => '', 'page_id' => ''];
 // Decodificar dados_extras JSONB se existir
 $instagram_dados = [];
@@ -447,9 +450,26 @@ try {
                                 </small>
                             </div>
                             
+                            <?php if ($linkedinExpired): ?>
+                            <div style="margin-bottom:14px; padding:12px 16px; border-radius:8px; background:#fee2e2; color:#991b1b; border:1px solid #fecaca;">
+                                <strong>⚠️ Token do LinkedIn expirado<?php echo $linkedinExpiresLabel ? ' em ' . htmlspecialchars($linkedinExpiresLabel) : ''; ?>.</strong>
+                                Clique em <strong>"Conectar com LinkedIn (OAuth)"</strong> para reautorizar e gerar um novo token.
+                            </div>
+                            <?php endif; ?>
+
                             <div class="form-group" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-                                <span class="status-indicator <?php echo (!empty($linkedin['access_token']) && !empty($linkedin['person_urn'])) ? 'connected' : 'disconnected'; ?>">
-                                    <?php echo (!empty($linkedin['access_token']) && !empty($linkedin['person_urn'])) ? '✅ Configurado' : '❌ Incompleto'; ?>
+                                <span class="status-indicator <?php echo ($linkedinExpired || empty($linkedin['access_token']) || empty($linkedin['person_urn'])) ? 'disconnected' : 'connected'; ?>">
+                                    <?php
+                                    if (empty($linkedin['access_token'])) {
+                                        echo '❌ Não configurado';
+                                    } elseif ($linkedinExpired) {
+                                        echo '⚠️ Token expirado' . ($linkedinExpiresLabel ? ' em ' . htmlspecialchars($linkedinExpiresLabel) : '');
+                                    } elseif (empty($linkedin['person_urn'])) {
+                                        echo '❌ Incompleto (falta Person URN)';
+                                    } else {
+                                        echo '✅ Configurado' . ($linkedinExpiresLabel ? ' (válido até ' . htmlspecialchars($linkedinExpiresLabel) . ')' : '');
+                                    }
+                                    ?>
                                 </span>
                                 
                                 <?php if (!empty($linkedin['client_id']) && !empty($linkedin['client_secret'])): ?>

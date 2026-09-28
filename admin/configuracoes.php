@@ -322,6 +322,14 @@ try {
                                            value="<?php echo htmlspecialchars($configs['openai_api_key'] ?? ''); ?>">
                                 </div>
 
+                                <div class="form-group llm-provider-field" data-provider="openai">
+                                    <label for="openai_base_url">OpenAI Base URL (opcional)</label>
+                                    <input type="text" id="openai_base_url" name="openai_base_url"
+                                           placeholder="https://api.openai.com/v1"
+                                           value="<?php echo htmlspecialchars($configs['openai_base_url'] ?? ''); ?>">
+                                    <small class="form-text">Deixe vazio para a OpenAI oficial. Informe para endpoints OpenAI-compatíveis (vLLM, LM Studio, etc.), ex.: https://seu-servidor/v1</small>
+                                </div>
+
                                 <div class="form-group llm-provider-field" data-provider="deepseek">
                                     <label for="deepseek_api_key">DeepSeek API Key</label>
                                     <input type="password" id="deepseek_api_key" name="deepseek_api_key"

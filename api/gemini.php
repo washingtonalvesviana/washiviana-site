@@ -150,7 +150,13 @@ function gerarTextoComProvider($provider, $model, $prompt, $maxTokens) {
         $baseUrl = 'https://api.openai.com/v1';
         $headers = ['Authorization: Bearer ' . $apiKey];
 
-        if ($provider === 'deepseek') {
+        if ($provider === 'openai') {
+            // Base URL opcional para endpoints OpenAI-compatíveis (vLLM, LM Studio, etc.)
+            $customBaseUrl = trim((string)getConfig('openai_base_url'));
+            if ($customBaseUrl !== '') {
+                $baseUrl = rtrim($customBaseUrl, '/');
+            }
+        } elseif ($provider === 'deepseek') {
             $baseUrl = 'https://api.deepseek.com/v1';
         } elseif ($provider === 'openrouter') {
             $baseUrl = 'https://openrouter.ai/api/v1';
@@ -158,14 +164,23 @@ function gerarTextoComProvider($provider, $model, $prompt, $maxTokens) {
             $headers[] = 'X-Title: Washiviana Admin';
         }
 
-        $resp = callJsonHttp($baseUrl . '/chat/completions', [
+        $payload = [
             'model' => $model,
             'messages' => [
                 ['role' => 'user', 'content' => $prompt]
             ],
             'max_tokens' => (int)$maxTokens,
             'temperature' => 0.7
-        ], $headers, 180);
+        ];
+
+        // Endpoints OpenAI-compatíveis self-hosted (ex.: vLLM) com modelos híbridos
+        // (Qwen3) podem consumir todos os tokens em "reasoning" e devolver content vazio.
+        // Desabilita o modo thinking apenas quando uma base URL customizada está configurada.
+        if ($provider === 'openai' && trim((string)getConfig('openai_base_url')) !== '') {
+            $payload['chat_template_kwargs'] = ['enable_thinking' => false];
+        }
+
+        $resp = callJsonHttp($baseUrl . '/chat/completions', $payload, $headers, 180);
 
         if (!$resp['success']) {
             return ['success' => false, 'error' => $resp['error']];

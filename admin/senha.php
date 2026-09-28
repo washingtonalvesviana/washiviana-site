@@ -51,7 +51,8 @@ requireAuth();
                         </div>
 
                         <button type="submit" class="btn btn-primary">
-                            <i class="ph ph-floppy-disk"></i> Salvar nova senha
+                            <span id="btnSenhaText"><i class="ph ph-floppy-disk"></i> Salvar nova senha</span>
+                            <span id="btnSenhaLoader" style="display:none;"><span class="spinner" style="vertical-align:middle;margin-right:6px;"></span>Salvando...</span>
                         </button>
 
                         <div id="senhaMsg" style="margin-top:12px;"></div>
@@ -65,11 +66,15 @@ requireAuth();
                     var form = e.target;
                     var msg = document.getElementById('senhaMsg');
                     var btn = form.querySelector('button[type="submit"]');
+                    var btnText = document.getElementById('btnSenhaText');
+                    var btnLoader = document.getElementById('btnSenhaLoader');
                     var fd = new FormData(form);
                     fd.append('action', 'change_password');
 
                     msg.textContent = '';
                     btn.disabled = true;
+                    if (btnText) btnText.style.display = 'none';
+                    if (btnLoader) btnLoader.style.display = 'inline';
 
                     fetch('../api/auth.php', { method: 'POST', body: fd, credentials: 'same-origin' })
                         .then(function (response) {
@@ -89,6 +94,8 @@ requireAuth();
                         })
                         .finally(function () {
                             btn.disabled = false;
+                            if (btnText) btnText.style.display = 'inline';
+                            if (btnLoader) btnLoader.style.display = 'none';
                         });
                 });
             </script>

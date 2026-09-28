@@ -413,7 +413,7 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                 
                 <div id="messageDiv" class="message" style="display: none;"></div>
                 
-                <form id="artigoForm" method="post" action="../api/artigos.php" enctype="multipart/form-data">
+                <form id="artigoForm" method="post" action="../api/artigos.php" enctype="multipart/form-data" novalidate>
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                     <input type="hidden" name="id" value="<?php echo $artigo['id'] ?? ''; ?>">
                     <input type="hidden" name="action" value="<?php echo !empty($artigo['id']) ? 'update' : 'create'; ?>">
@@ -455,7 +455,7 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                                 </div>
                                 <button type="button" class="btn btn-primary" onclick="gerarConteudoIA()">
                                     <span id="btnGerarTextoLabel"><i class="ph ph-sparkle"></i> Gerar Texto</span>
-                                    <span id="btnGerarTextoLoader" style="display:none;">Gerando...</span>
+                                    <span id="btnGerarTextoLoader" style="display:none;"><span class="spinner" style="vertical-align:middle;margin-right:6px;"></span>Gerando...</span>
                                 </button>
                                 
                                 <hr>
@@ -466,7 +466,7 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                                 </div>
                                 <button type="button" class="btn btn-primary" onclick="gerarImagemIA()">
                                     <span id="btnGerarImagemLabel"><i class="ph ph-image"></i> Gerar Imagem</span>
-                                    <span id="btnGerarImagemLoader" style="display:none;">Gerando...</span>
+                                    <span id="btnGerarImagemLoader" style="display:none;"><span class="spinner" style="vertical-align:middle;margin-right:6px;"></span>Gerando...</span>
                                 </button>
                                 
                                 <?php $imagemIaUrl = uploadFileUrl($artigo['imagem_1x1'] ?? null); ?>
@@ -523,7 +523,7 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                         </div>
                         <button type="submit" class="btn btn-primary btn-block" style="margin-top:16px;">
                             <span id="btnSaveText"><i class="ph ph-floppy-disk"></i> Salvar Conteúdo</span>
-                            <span id="btnSaveLoader" style="display:none;">Salvando...</span>
+                            <span id="btnSaveLoader" style="display:none;"><span class="spinner" style="vertical-align:middle;margin-right:6px;"></span>Salvando...</span>
                         </button>
                     </div>
                     
@@ -770,6 +770,7 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                         
 <button type="submit" class="btn btn-primary btn-block" style="margin-top:16px;">
                             <span id="btnSaveText"><i class="ph ph-floppy-disk"></i> Salvar</span>
+                            <span id="btnSaveLoader" style="display:none;"><span class="spinner" style="vertical-align:middle;margin-right:6px;"></span>Salvando...</span>
                         </button>
                     </div>
                 </form>
@@ -895,19 +896,52 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                     atualizarRedesDestino();
                 })();
 
+                function activateFormTab(tabId) {
+                    var btn = document.querySelector('.form-tab[data-tab="' + tabId + '"]');
+                    if (btn) btn.click();
+                }
+
+                function setSubmitLoading(btn, loading) {
+                    if (!btn) return;
+                    btn.disabled = loading;
+                    var spans = btn.querySelectorAll('span');
+                    if (spans.length >= 2) {
+                        spans[0].style.display = loading ? 'none' : 'inline';
+                        spans[1].style.display = loading ? 'inline-block' : 'none';
+                    }
+                }
+
                 document.getElementById('artigoForm')?.addEventListener('submit', function(e) {
                     e.preventDefault();
 
                     var form = this;
+                    var messageDiv = document.getElementById('messageDiv');
+                    var submitter = e.submitter || form.querySelector('button[type="submit"]');
+
+                    // Validação explícita: evita bloqueio silencioso do required em aba oculta
+                    var tituloEl = document.getElementById('titulo');
+                    var conteudoEl = document.getElementById('conteudo');
+                    if (tituloEl && !tituloEl.value.trim()) {
+                        messageDiv.style.display = 'block';
+                        messageDiv.className = 'message message-error';
+                        messageDiv.textContent = '❌ Preencha o Título antes de salvar.';
+                        activateFormTab('tab-info');
+                        tituloEl.focus();
+                        return;
+                    }
+                    if (conteudoEl && !conteudoEl.value.trim()) {
+                        messageDiv.style.display = 'block';
+                        messageDiv.className = 'message message-error';
+                        messageDiv.textContent = '❌ Preencha o Conteúdo antes de salvar.';
+                        activateFormTab('tab-info');
+                        conteudoEl.focus();
+                        return;
+                    }
+
                     var formData = new FormData(form);
                     formData.set('action', formData.get('id') ? 'update' : 'create');
 
-                    var btnSaveText = document.getElementById('btnSaveText');
-                    var btnSaveLoader = document.getElementById('btnSaveLoader');
-                    var messageDiv = document.getElementById('messageDiv');
-
-                    if (btnSaveText) btnSaveText.style.display = 'none';
-                    if (btnSaveLoader) btnSaveLoader.style.display = 'inline';
+                    setSubmitLoading(submitter, true);
 
                     fetch('../api/artigos.php', {
                         method: 'POST',
@@ -938,8 +972,7 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     })
                     .finally(function() {
-                        if (btnSaveText) btnSaveText.style.display = 'inline';
-                        if (btnSaveLoader) btnSaveLoader.style.display = 'none';
+                        setSubmitLoading(submitter, false);
                     });
                 });
 
@@ -984,6 +1017,15 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                         .catch(function(err) { alert('❌ ' + err.message); });
                 }
 
+                function setIaButtonLoading(prefix, loading) {
+                    var label = document.getElementById(prefix + 'Label');
+                    var loader = document.getElementById(prefix + 'Loader');
+                    var btn = label ? label.closest('button') : null;
+                    if (label) label.style.display = loading ? 'none' : '';
+                    if (loader) loader.style.display = loading ? 'inline-block' : 'none';
+                    if (btn) btn.disabled = loading;
+                }
+
                 function gerarConteudoIA() {
                     var prompt = (document.getElementById('prompt_texto')?.value || '').trim();
                     if (!prompt) {
@@ -996,6 +1038,8 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                     fd.append('tema', prompt);
                     var csrf = document.querySelector('#artigoForm input[name="csrf_token"]')?.value || '';
                     if (csrf) fd.append('csrf_token', csrf);
+
+                    setIaButtonLoading('btnGerarTexto', true);
 
                     fetch('../api/gemini.php', { method: 'POST', body: fd, credentials: 'same-origin' })
                         .then(parseApiJsonResponse)
@@ -1014,6 +1058,9 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                         })
                         .catch(function(err) {
                             alert('❌ ' + err.message);
+                        })
+                        .finally(function() {
+                            setIaButtonLoading('btnGerarTexto', false);
                         });
                 }
 
@@ -1031,6 +1078,8 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                     fd.append('prompt', prompt);
                     var csrf = document.querySelector('#artigoForm input[name="csrf_token"]')?.value || '';
                     if (csrf) fd.append('csrf_token', csrf);
+
+                    setIaButtonLoading('btnGerarImagem', true);
 
                     fetch('../api/gemini.php', { method: 'POST', body: fd, credentials: 'same-origin' })
                         .then(parseApiJsonResponse)
@@ -1055,6 +1104,9 @@ $geminiApiKey = getConfig('gemini_api_key') ?? '';
                         })
                         .catch(function(err) {
                             alert('❌ ' + err.message);
+                        })
+                        .finally(function() {
+                            setIaButtonLoading('btnGerarImagem', false);
                         });
                 }
 

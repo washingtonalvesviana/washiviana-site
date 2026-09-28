@@ -21,6 +21,7 @@ if (!in_array($providerVideo, $allowedProviders, true)) $providerVideo = $provid
 
 $apiKeyParam = trim((string)($_GET['api_key'] ?? $_POST['api_key'] ?? ''));
 $ollamaBaseUrl = trim((string)($_GET['ollama_base_url'] ?? $_POST['ollama_base_url'] ?? getConfig('ollama_base_url') ?? 'http://localhost:11434'));
+$openaiBaseUrl = trim((string)($_GET['openai_base_url'] ?? $_POST['openai_base_url'] ?? getConfig('openai_base_url') ?? ''));
 
 function requestJson($url, $headers = [], $timeout = 30) {
     $ch = curl_init();
@@ -264,7 +265,7 @@ try {
 
     switch ($providerForFetch) {
         case 'openai':
-            $result = listOpenAICompatibleModels('https://api.openai.com/v1', $apiKey);
+            $result = listOpenAICompatibleModels($openaiBaseUrl !== '' ? $openaiBaseUrl : 'https://api.openai.com/v1', $apiKey);
             if (!$result['success'] && $apiKey === '') {
                 $result['message'] = 'OpenAI: API Key não configurada';
             }

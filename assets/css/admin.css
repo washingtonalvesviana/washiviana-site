@@ -1241,6 +1241,32 @@ input:checked+.toggle-slider:before {
     }
 }
 
+/* === INDICADOR GLOBAL DE PROCESSAMENTO (fetch) === */
+.wv-global-loading {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 10000;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #18181b;
+    color: #ffffff;
+    border-radius: 999px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    pointer-events: none;
+}
+
+.wv-global-loading .spinner {
+    width: 14px;
+    height: 14px;
+    border-width: 2px;
+}
+
 /* === FILTERS (Status) === */
 .status-filters {
     display: flex;

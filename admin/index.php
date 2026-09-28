@@ -96,7 +96,7 @@ if (!defined('BASE_URL')) define('BASE_URL', $protocol . '://' . $hostNoPort . $
                 
                 <button type="submit" class="btn btn-primary btn-block" id="btnLogin">
                     <span class="btn-text">Entrar</span>
-                    <span class="btn-loader" style="display: none;">Entrando...</span>
+                    <span class="btn-loader" style="display: none;"><span class="spinner" style="vertical-align:middle;margin-right:6px;"></span>Entrando...</span>
                 </button>
             </form>
             

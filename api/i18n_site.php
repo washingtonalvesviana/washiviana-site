@@ -451,7 +451,12 @@ function callLlmJsonForSite(string $provider, string $apiKey, string $model, str
             'Content-Type: application/json',
             'Authorization: Bearer ' . $apiKey,
         ];
-        if ($provider === 'deepseek') {
+        if ($provider === 'openai') {
+            $customBaseUrl = trim((string)getConfig('openai_base_url'));
+            if ($customBaseUrl !== '') {
+                $baseUrl = rtrim($customBaseUrl, '/');
+            }
+        } elseif ($provider === 'deepseek') {
             $baseUrl = 'https://api.deepseek.com/v1';
         } elseif ($provider === 'openrouter') {
             $baseUrl = 'https://openrouter.ai/api/v1';
@@ -468,6 +473,11 @@ function callLlmJsonForSite(string $provider, string $apiKey, string $model, str
             'temperature' => 0.2,
             'response_format' => ['type' => 'json_object'],
         ];
+
+        // Evita que modelos híbridos (Qwen3) em vLLM gastem tudo em reasoning e retornem JSON vazio.
+        if ($provider === 'openai' && trim((string)getConfig('openai_base_url')) !== '') {
+            $basePayload['chat_template_kwargs'] = ['enable_thinking' => false];
+        }
 
         $payloadVariants = [
             $basePayload + ['max_tokens' => 4096],
