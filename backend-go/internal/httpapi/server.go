@@ -138,6 +138,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/v1/radar/ideas/{id}/sources", s.handleRadarIdeaSources)
 	mux.HandleFunc("POST /api/v1/radar/ideas/generate", s.writeGuard(s.handleRadarIdeasGenerate))
 	mux.HandleFunc("POST /api/v1/radar/hype", s.writeGuard(s.handleRadarHype))
+	mux.HandleFunc("POST /api/v1/radar/ideas/{id}/to-draft", s.writeGuard(s.handleRadarIdeaToDraft))
 
 	// SEO/Traduções (escrita)
 	mux.HandleFunc("POST /api/v1/i18n/generate", s.writeGuard(s.handleI18nGenerate))
@@ -1992,6 +1993,32 @@ func (s *Server) handleRadarHype(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"success": true, "clusters_found": clusters, "items_updated": updated})
+}
+
+func (s *Server) handleRadarIdeaToDraft(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "ID inválido"})
+		return
+	}
+	var body struct {
+		Mode string `json:"mode"`
+	}
+	_ = json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&body)
+
+	ctx, cancel := context.WithTimeout(r.Context(), 240*time.Second)
+	defer cancel()
+
+	artigoID, slug, err := s.radar.IdeaToDraft(ctx, id, body.Mode)
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"success": false, "message": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success": true,
+		"message": "Rascunho criado em Conteúdos",
+		"result":  map[string]any{"success": true, "artigo_id": artigoID, "slug": slug},
+	})
 }
 
 // --- vídeos ---

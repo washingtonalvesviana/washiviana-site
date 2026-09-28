@@ -58,7 +58,13 @@ class Handler(BaseHTTPRequestHandler):
         lang_match = _re.search(r"para (pt|en|es)", prompt)
         lang = lang_match.group(1) if lang_match else "en"
 
-        if "sugerir ideias de artigos" in prompt:
+        if "Escreva um artigo ORIGINAL baseado nesta ideia" in prompt:
+            reply = ("Título: Mock Draft Artigo\n"
+                     "Slug: mock-draft-artigo\n"
+                     "Categoria: IA\n"
+                     "Resumo: resumo mock do artigo\n"
+                     "Conteúdo: <p>corpo mock</p>")
+        elif "sugerir ideias de artigos" in prompt:
             reply = json.dumps({"ideas": [
                 {"title": "Mock Idea 1", "angle": "angulo", "summary": "resumo",
                  "outline": ["p1", "p2"], "tags": ["t1", "t2"], "priority": "hype"},

@@ -6,12 +6,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"washiviana/backend/internal/ai"
 	"washiviana/backend/internal/store"
+	"washiviana/backend/internal/textutil"
 )
 
 // Service executa operações do radar.
@@ -154,6 +157,226 @@ func (s *Service) modelLabel(ctx context.Context) string {
 		p = "gemini"
 	}
 	return p + ":" + cfg["llm_text_model"]
+}
+
+// IdeaToDraft cria um artigo rascunho a partir de uma ideia (modos "ai"/"simple").
+func (s *Service) IdeaToDraft(ctx context.Context, ideaID int, mode string) (int, string, error) {
+	idea, err := s.store.RadarIdeaWithTopic(ctx, ideaID)
+	if err != nil {
+		return 0, "", err
+	}
+	if idea == nil {
+		return 0, "", fmt.Errorf("Ideia não encontrada")
+	}
+
+	if strings.EqualFold(strings.TrimSpace(mode), "simple") {
+		return s.ideaToSimpleDraft(ctx, ideaID, idea)
+	}
+
+	itemIDs := jsonIntSlice(idea["source_item_ids"])
+	refs, _ := s.store.RadarItemRefs(ctx, itemIDs)
+
+	cfg, _ := s.store.GetConfiguracoes(ctx, []string{"ia_instrucoes"})
+	prompt := ""
+	if strings.TrimSpace(cfg["ia_instrucoes"]) != "" {
+		prompt += strings.TrimSpace(cfg["ia_instrucoes"]) + "\n\n"
+	}
+	refsStr := "- (sem links)\n"
+	if len(refs) > 0 {
+		refsStr = strings.Join(refs, "\n") + "\n"
+	}
+	prompt += "SOLICITAÇÃO: Escreva um artigo ORIGINAL baseado nesta ideia, no meu estilo.\n" +
+		"Tema/Área: " + asString(idea["topic_nome"]) + "\n" +
+		"Ideia: " + asString(idea["titulo"]) + "\n" +
+		"Ângulo: " + asString(idea["angulo"]) + "\n" +
+		"Resumo da ideia: " + asString(idea["resumo"]) + "\n" +
+		"Outline sugerido:\n" + asString(idea["outline"]) + "\n\n" +
+		"Referências (para você entender o contexto; NÃO copie frases):\n" + refsStr + "\n" +
+		"Regras obrigatórias:\n" +
+		"- Não copiar trechos literalmente das fontes.\n" +
+		"- Escrever com voz autoral, didática e prática.\n" +
+		"- Incluir no final uma seção <h2>Fontes</h2> com lista (<ul><li>) de links usados.\n\n" +
+		"FORMATO DE SAÍDA OBRIGATÓRIO:\n" +
+		"- Comece DIRETAMENTE com os campos, sem introdução.\n" +
+		"- Use EXATAMENTE estas labels no início de cada linha.\n" +
+		"- O CONTEÚDO deve estar em HTML.\n\n" +
+		"Título: [título aqui]\n" +
+		"Slug: [slug-aqui-em-minusculas-sem-acentos]\n" +
+		"Categoria: [categoria]\n" +
+		"Resumo: [resumo até 320 caracteres, texto puro sem HTML]\n" +
+		"Conteúdo: [ARTIGO COMPLETO EM HTML]\n"
+
+	text, _, err := s.ai.GenerateText(ctx, prompt, 8192)
+	if err != nil {
+		return 0, "", err
+	}
+	parsed := parseStructuredArticle(text)
+	titulo := parsed.Titulo
+	if titulo == "" {
+		titulo = asString(idea["titulo"])
+	}
+	slug := parsed.Slug
+	if slug == "" {
+		slug = textutil.Slugify(titulo)
+	}
+	resumo := parsed.Resumo
+	if resumo == "" {
+		resumo = asString(idea["resumo"])
+	}
+	conteudo := parsed.Conteudo
+	if conteudo == "" {
+		conteudo = text
+	}
+	slug = s.withUniqueSlug(ctx, slug)
+	categoriaID := optionalInt(idea["categoria_artigos_id"])
+	artigoID, err := s.store.InsertArtigoDraft(ctx, titulo, slug, resumo, conteudo, categoriaID, &prompt)
+	if err != nil {
+		return 0, "", err
+	}
+	_ = s.store.UpdateRadarIdeaStatus(ctx, ideaID, "virou_artigo")
+	return artigoID, slug, nil
+}
+
+func (s *Service) ideaToSimpleDraft(ctx context.Context, ideaID int, idea map[string]any) (int, string, error) {
+	titulo := strings.TrimSpace(asString(idea["titulo"]))
+	if titulo == "" {
+		return 0, "", fmt.Errorf("Título vazio")
+	}
+	slug := s.withUniqueSlug(ctx, textutil.Slugify(titulo))
+	resumo := strings.TrimSpace(asString(idea["resumo"]))
+	outline := asString(idea["outline"])
+
+	var b strings.Builder
+	if resumo != "" {
+		b.WriteString("<p>" + htmlEscape(resumo) + "</p>")
+	}
+	if strings.TrimSpace(outline) != "" {
+		b.WriteString("<ul>")
+		for _, line := range strings.Split(strings.ReplaceAll(outline, "\r\n", "\n"), "\n") {
+			line = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "-"))
+			if line == "" {
+				continue
+			}
+			b.WriteString("<li>" + htmlEscape(line) + "</li>")
+		}
+		b.WriteString("</ul>")
+	}
+	conteudo := b.String()
+	if strings.TrimSpace(conteudo) == "" {
+		return 0, "", fmt.Errorf("Ideia sem conteúdo")
+	}
+	categoriaID := optionalInt(idea["categoria_artigos_id"])
+	artigoID, err := s.store.InsertArtigoDraft(ctx, titulo, slug, resumo, conteudo, categoriaID, nil)
+	if err != nil {
+		return 0, "", err
+	}
+	_ = s.store.UpdateRadarIdeaStatus(ctx, ideaID, "virou_artigo")
+	return artigoID, slug, nil
+}
+
+func (s *Service) withUniqueSlug(ctx context.Context, slug string) string {
+	exists, err := s.store.ArtigoSlugExists(ctx, slug)
+	if err == nil && exists {
+		return slug + "-" + strconv.FormatInt(time.Now().Unix(), 10)
+	}
+	return slug
+}
+
+type structuredArticle struct {
+	Titulo    string
+	Slug      string
+	Categoria string
+	Resumo    string
+	Conteudo  string
+}
+
+// RE2 não suporta lookahead; os padrões abaixo são line-based e usam índices.
+var (
+	reTitulo    = regexp.MustCompile(`(?im)^[^\S\n]*t[ií]tulo\s*:\s*(.+?)\s*$`)
+	reSlug      = regexp.MustCompile(`(?im)^[^\S\n]*slug\s*:\s*(.+?)\s*$`)
+	reCategoria = regexp.MustCompile(`(?im)^[^\S\n]*categoria\s*:\s*(.+?)\s*$`)
+	reResumoLab = regexp.MustCompile(`(?im)^[^\S\n]*resumo\s*:\s*`)
+	reContLab   = regexp.MustCompile(`(?im)^[^\S\n]*conte[uú]do\s*:\s*`)
+	reTitLab    = regexp.MustCompile(`(?im)^[^\S\n]*t[ií]tulo\s*:\s*`)
+)
+
+func parseStructuredArticle(text string) structuredArticle {
+	out := structuredArticle{}
+	t := strings.TrimSpace(text)
+	if t == "" {
+		return out
+	}
+	// Remove introdução antes do primeiro "Título:".
+	if loc := reTitLab.FindStringIndex(t); loc != nil {
+		t = t[loc[0]:]
+	}
+	out.Titulo = firstMatch(reTitulo, t)
+	out.Slug = firstMatch(reSlug, t)
+	out.Categoria = firstMatch(reCategoria, t)
+
+	// Resumo: entre "Resumo:" e "Conteúdo:".
+	if rl := reResumoLab.FindStringIndex(t); rl != nil {
+		end := len(t)
+		if cl := reContLab.FindStringIndex(t[rl[1]:]); cl != nil {
+			end = rl[1] + cl[0]
+		}
+		out.Resumo = strings.TrimSpace(t[rl[1]:end])
+	}
+	// Conteúdo: tudo após "Conteúdo:".
+	if cl := reContLab.FindStringIndex(t); cl != nil {
+		out.Conteudo = strings.TrimSpace(t[cl[1]:])
+	}
+	return out
+}
+
+func firstMatch(re *regexp.Regexp, s string) string {
+	m := re.FindStringSubmatch(s)
+	if len(m) >= 2 {
+		return strings.TrimSpace(m[1])
+	}
+	return ""
+}
+
+func jsonIntSlice(v any) []int {
+	s, ok := v.(string)
+	if !ok || s == "" {
+		return nil
+	}
+	var arr []any
+	if json.Unmarshal([]byte(s), &arr) != nil {
+		return nil
+	}
+	out := []int{}
+	for _, x := range arr {
+		switch n := x.(type) {
+		case float64:
+			out = append(out, int(n))
+		case int:
+			out = append(out, n)
+		}
+	}
+	return out
+}
+
+func optionalInt(v any) *int {
+	switch n := v.(type) {
+	case float64:
+		if n > 0 {
+			i := int(n)
+			return &i
+		}
+	case int:
+		if n > 0 {
+			i := n
+			return &i
+		}
+	}
+	return nil
+}
+
+func htmlEscape(s string) string {
+	r := strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;", "\"", "&quot;", "'", "&#039;")
+	return r.Replace(s)
 }
 
 // AnalyzeHype agrupa itens similares e grava métricas de "hype" no raw.

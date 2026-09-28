@@ -32,7 +32,8 @@
 - [x] (b, parcial) **i18n do site** → Go: `POST /api/v1/i18n/site` (UI strings em chunks + configs via LLM; upsert em `ui_strings`/`configuracoes_i18n`). Divergência: **categorias** (categorias_i18n) ainda não incluídas. `i18nsite_test.py` **4/4 PASS** (com mock; chaves afetadas restauradas).
 - [x] (b, parcial) **Radar (CRUD/listas)** → Go: temas (list/save/delete), fontes (list/save/delete), vínculo tema↔fonte, itens (list/delete por ids ou url_like), ideias (list/discard/sources). `radar_test.py` **16/16 PASS**.
 - [x] (b, parcial) **Radar (IA/clustering)** → Go: `POST /api/v1/radar/ideas/generate` (prompt + `GenerateJSON` multi-provedor; grava em `radar_ideas`) e `POST /api/v1/radar/hype` (clustering por Levenshtein + métricas velocity/hype_score/is_trending em `radar_items.raw`). `radar_ai_test.py` **4/4 PASS** (mock; sem chamadas externas).
-  - Adiado (documentado): `collect_run` (scraping/RSS — `radar_lib`), `idea_to_draft` (gera rascunho de artigo) e o backup CSV no delete de itens.
+- [x] (b, parcial) **Radar `idea_to_draft`** → Go: `POST /api/v1/radar/ideas/{id}/to-draft` (modos `ai` e `simple`; cria artigo rascunho em `artigos`, marca a ideia como `virou_artigo`, slug único). `radar_draft_test.py` **7/7 PASS** (mock + cleanup).
+  - Adiado (documentado): `collect_run` (scraping/RSS — `radar_lib`) e o backup CSV no delete de itens.
 - [ ] (b) Demais endpoints → Go: linkedin/facebook/instagram, oauth callbacks (`linkedin-callback.php`, `oauth_callback.php`), categorias i18n e publicação (gated).
 - [ ] (c) Site público → Go/Next.js (strangler) — **próximo grande bloco**.
 - [ ] (d) Aposentar admin/site PHP após paridade.
