@@ -280,6 +280,237 @@ func truncate(s string, max int) string {
 	return string(r[:max]) + "…"
 }
 
+// ErrNotFound indica página/recurso inexistente.
+var ErrNotFound = fmt.Errorf("não encontrado")
+
+// pageCtx reúne dados comuns de configuração/i18n.
+type pageCtx struct {
+	cfg       map[string]string
+	tr        map[string]string
+	cfgI18n   map[string]string
+	titulo    string
+	subtitulo string
+	base      string
+}
+
+func (s *Service) pageCtx(ctx context.Context, lang string) (*pageCtx, error) {
+	cfg, err := s.store.GetConfiguracoes(ctx, siteConfigKeys)
+	if err != nil {
+		return nil, err
+	}
+	tr, cfgI18n := s.strings(ctx, lang)
+	titulo := cfg["site_titulo"]
+	if titulo == "" {
+		titulo = "Washiviana"
+	}
+	subt := cfg["site_subtitulo"]
+	if lang != "pt" {
+		if v := strings.TrimSpace(cfgI18n["site_subtitulo"]); v != "" {
+			subt = v
+		}
+	}
+	return &pageCtx{cfg: cfg, tr: tr, cfgI18n: cfgI18n, titulo: titulo, subtitulo: subt, base: strings.TrimRight(s.cfg.SiteBaseURL, "/")}, nil
+}
+
+func (p *pageCtx) t(key string) string { return p.tr[key] }
+
+func (p *pageCtx) pick(key string) string {
+	if v := strings.TrimSpace(p.cfgI18n[key]); v != "" {
+		return v
+	}
+	return p.cfg[key]
+}
+
+// shell monta a página completa (head + header + inner + footer).
+func (s *Service) shell(lang string, p *pageCtx, title, description, canonicalPath, inner string) string {
+	canonical := p.base + canonicalPath
+	var b strings.Builder
+	b.WriteString("<!doctype html>\n<html lang=\"" + htmlLang(lang) + "\">\n<head>\n")
+	b.WriteString("<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n")
+	b.WriteString("<title>" + esc(title) + "</title>\n")
+	if description != "" {
+		b.WriteString("<meta name=\"description\" content=\"" + esc(description) + "\">\n")
+	}
+	b.WriteString("<link rel=\"canonical\" href=\"" + esc(canonical) + "\">\n")
+	b.WriteString("<meta property=\"og:type\" content=\"website\">\n")
+	b.WriteString("<meta property=\"og:title\" content=\"" + esc(title) + "\">\n")
+	b.WriteString("<meta property=\"og:description\" content=\"" + esc(description) + "\">\n")
+	b.WriteString("<meta property=\"og:url\" content=\"" + esc(canonical) + "\">\n")
+	b.WriteString("<link rel=\"stylesheet\" href=\"/assets/css/tailwind.min.css\">\n</head>\n")
+
+	b.WriteString("<body class=\"bg-white text-neutral-800 antialiased\">\n")
+	b.WriteString("<header class=\"max-w-5xl mx-auto flex items-center justify-between px-4 py-5\">\n")
+	b.WriteString("<a href=\"/site/" + lang + "/\" class=\"font-bold text-lg\">" + esc(p.titulo) + "</a>\n")
+	b.WriteString("<nav class=\"flex items-center gap-5 text-sm\">")
+	b.WriteString(nav(lang, "/conteudos", p.t("nav.contents")))
+	b.WriteString(nav(lang, "/projetos", p.t("nav.projects")))
+	b.WriteString(nav(lang, "/sobre", p.t("nav.about")))
+	b.WriteString("</nav></header>\n")
+	b.WriteString("<main class=\"max-w-5xl mx-auto px-4 py-10\">\n" + inner + "</main>\n")
+	b.WriteString("<footer class=\"border-t border-neutral-200 mt-10\">\n<div class=\"max-w-5xl mx-auto px-4 py-8 text-sm text-neutral-600\">")
+	b.WriteString("<a class=\"hover:underline\" href=\"/site/" + lang + "/\">" + esc(p.titulo) + "</a> — " + esc(p.t("footer.rights")))
+	b.WriteString("</div></footer>\n</body></html>\n")
+	return b.String()
+}
+
+// RenderConteudos lista os conteúdos publicados.
+func (s *Service) RenderConteudos(ctx context.Context, lang string) (string, error) {
+	p, err := s.pageCtx(ctx, lang)
+	if err != nil {
+		return "", err
+	}
+	articles, err := s.store.SiteLatestArticles(ctx, 50)
+	if err != nil {
+		return "", err
+	}
+	var b strings.Builder
+	b.WriteString("<h1 class=\"text-3xl font-black mb-8\">" + esc(p.t("contents.page_title")) + "</h1>\n")
+	if len(articles) == 0 {
+		b.WriteString("<p class=\"text-neutral-500\">" + esc(p.t("home.soon")) + "</p>")
+	} else {
+		b.WriteString("<ul class=\"grid sm:grid-cols-2 gap-6\">\n")
+		for _, a := range articles {
+			b.WriteString("<li><a class=\"block hover:underline\" href=\"/" + lang + "/artigo/" + esc(asStr(a["slug"])) + "\">")
+			b.WriteString("<span class=\"text-lg font-semibold\">" + esc(asStr(a["titulo"])) + "</span>")
+			if r := asStr(a["resumo"]); r != "" {
+				b.WriteString("<p class=\"text-sm text-neutral-600 mt-1\">" + esc(truncate(r, 180)) + "</p>")
+			}
+			b.WriteString("</a></li>\n")
+		}
+		b.WriteString("</ul>\n")
+	}
+	return s.shell(lang, p, p.titulo+" — "+p.t("contents.page_title"), p.pick("home_frase_impacto"), "/site/"+lang+"/conteudos", b.String()), nil
+}
+
+// RenderProjetos lista os projetos ativos.
+func (s *Service) RenderProjetos(ctx context.Context, lang string) (string, error) {
+	p, err := s.pageCtx(ctx, lang)
+	if err != nil {
+		return "", err
+	}
+	projects, err := s.store.SiteFeaturedProjects(ctx, 50)
+	if err != nil {
+		return "", err
+	}
+	var b strings.Builder
+	b.WriteString("<h1 class=\"text-3xl font-black mb-8\">" + esc(p.t("projects.page_title_all")) + "</h1>\n")
+	b.WriteString("<ul class=\"grid sm:grid-cols-2 lg:grid-cols-3 gap-6\">\n")
+	for _, pr := range projects {
+		b.WriteString("<li class=\"rounded-xl border border-neutral-200 p-5\">")
+		b.WriteString("<a class=\"font-semibold hover:underline\" href=\"/" + lang + "/projeto/" + esc(asStr(pr["slug"])) + "\">" + esc(asStr(pr["titulo"])) + "</a>")
+		if d := asStr(pr["descricao"]); d != "" {
+			b.WriteString("<p class=\"text-sm text-neutral-600 mt-2\">" + esc(truncate(d, 160)) + "</p>")
+		}
+		b.WriteString("</li>\n")
+	}
+	b.WriteString("</ul>\n")
+	return s.shell(lang, p, p.titulo+" — "+p.t("projects.page_title_all"), p.pick("home_frase_impacto"), "/site/"+lang+"/projetos", b.String()), nil
+}
+
+// RenderArtigo renderiza o detalhe do artigo por slug.
+func (s *Service) RenderArtigo(ctx context.Context, lang, slug string) (string, error) {
+	p, err := s.pageCtx(ctx, lang)
+	if err != nil {
+		return "", err
+	}
+	a, err := s.store.SiteArticleBySlug(ctx, slug)
+	if err != nil {
+		return "", err
+	}
+	if a == nil {
+		return "", ErrNotFound
+	}
+	titulo := asStr(a["titulo"])
+	resumo := asStr(a["resumo"])
+	conteudo := asStr(a["conteudo"])
+	metaDesc := resumo
+	if lang != "pt" {
+		if id := asIntAnyLocal(a["id"]); id > 0 {
+			if row, _ := s.store.ArtigoI18nRow(ctx, id, lang); row != nil {
+				if v := asStr(row["titulo"]); v != "" {
+					titulo = v
+				}
+				if v := asStr(row["resumo"]); v != "" {
+					resumo = v
+					metaDesc = v
+				}
+				if v := asStr(row["conteudo"]); v != "" {
+					conteudo = v
+				}
+				if v := asStr(row["meta_description"]); v != "" {
+					metaDesc = v
+				}
+			}
+		}
+	}
+	var b strings.Builder
+	b.WriteString("<a class=\"text-sm text-emerald-700 hover:underline\" href=\"/" + lang + "/conteudos\">← " + esc(p.t("nav.contents")) + "</a>\n")
+	b.WriteString("<article class=\"mt-4 max-w-3xl\"><h1 class=\"text-3xl font-black mb-4\">" + esc(titulo) + "</h1>\n")
+	b.WriteString("<div class=\"prose max-w-none text-neutral-800\">" + conteudo + "</div></article>\n")
+	return s.shell(lang, p, titulo+" — "+p.titulo, metaDesc, "/site/"+lang+"/artigo/"+slug, b.String()), nil
+}
+
+// RenderProjeto renderiza o detalhe do projeto por slug.
+func (s *Service) RenderProjeto(ctx context.Context, lang, slug string) (string, error) {
+	p, err := s.pageCtx(ctx, lang)
+	if err != nil {
+		return "", err
+	}
+	pr, err := s.store.SiteProjectBySlug(ctx, slug)
+	if err != nil {
+		return "", err
+	}
+	if pr == nil {
+		return "", ErrNotFound
+	}
+	titulo := asStr(pr["titulo"])
+	desc := asStr(pr["descricao"])
+	if lang != "pt" {
+		if id := asIntAnyLocal(pr["id"]); id > 0 {
+			if row, _ := s.store.ProjetoI18nRow(ctx, id, lang); row != nil {
+				if v := asStr(row["titulo"]); v != "" {
+					titulo = v
+				}
+				if v := asStr(row["descricao"]); v != "" {
+					desc = v
+				}
+			}
+		}
+	}
+	var b strings.Builder
+	b.WriteString("<a class=\"text-sm text-emerald-700 hover:underline\" href=\"/" + lang + "/projetos\">← " + esc(p.t("nav.projects")) + "</a>\n")
+	b.WriteString("<h1 class=\"text-3xl font-black mt-4 mb-4\">" + esc(titulo) + "</h1>\n")
+	b.WriteString("<div class=\"max-w-3xl text-neutral-700 whitespace-pre-line\">" + esc(desc) + "</div>\n")
+	return s.shell(lang, p, titulo+" — "+p.titulo, desc, "/site/"+lang+"/projeto/"+slug, b.String()), nil
+}
+
+// RenderSobre renderiza a página Sobre.
+func (s *Service) RenderSobre(ctx context.Context, lang string) (string, error) {
+	p, err := s.pageCtx(ctx, lang)
+	if err != nil {
+		return "", err
+	}
+	bio := p.pick("mini_bio")
+	var b strings.Builder
+	b.WriteString("<h1 class=\"text-3xl font-black mb-6\">" + esc(p.t("nav.about")) + "</h1>\n")
+	b.WriteString("<div class=\"prose max-w-3xl text-neutral-800\">" + bio + "</div>\n")
+	return s.shell(lang, p, p.titulo+" — "+p.t("nav.about"), p.pick("home_frase_impacto"), "/site/"+lang+"/sobre", b.String()), nil
+}
+
+func asIntAnyLocal(v any) int {
+	switch n := v.(type) {
+	case int:
+		return n
+	case int32:
+		return int(n)
+	case int64:
+		return int(n)
+	case float64:
+		return int(n)
+	}
+	return 0
+}
+
 // NormalizeLang valida o idioma (default pt).
 func NormalizeLang(l string) string {
 	switch strings.ToLower(strings.TrimSpace(l)) {

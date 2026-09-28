@@ -130,6 +130,11 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /site", s.handleSiteRoot)
 	mux.HandleFunc("GET /site/", s.handleSiteRoot)
 	mux.HandleFunc("GET /site/{lang}/", s.handleSiteHome)
+	mux.HandleFunc("GET /site/{lang}/conteudos", s.handleSiteConteudos)
+	mux.HandleFunc("GET /site/{lang}/projetos", s.handleSiteProjetos)
+	mux.HandleFunc("GET /site/{lang}/sobre", s.handleSiteSobre)
+	mux.HandleFunc("GET /site/{lang}/artigo/{slug}", s.handleSiteArtigo)
+	mux.HandleFunc("GET /site/{lang}/projeto/{slug}", s.handleSiteProjeto)
 
 	// Radar (temas, fontes, itens, ideias — CRUD/listas)
 	mux.HandleFunc("GET /api/v1/radar/topics", s.handleRadarTopicsList)
@@ -1690,6 +1695,78 @@ func (s *Server) handleSiteHome(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(body))
+}
+
+func (s *Server) writeHTML(w http.ResponseWriter, status int, body string) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(status)
+	_, _ = w.Write([]byte(body))
+}
+
+func (s *Server) renderSitePage(w http.ResponseWriter, r *http.Request, render func(ctx context.Context, lang string) (string, error), notFound bool) {
+	_ = notFound
+	lang := site.NormalizeLang(r.PathValue("lang"))
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+	body, err := render(ctx, lang)
+	if err != nil {
+		if errors.Is(err, site.ErrNotFound) {
+			s.writeHTML(w, http.StatusNotFound, "<!doctype html><meta charset=utf-8><h1>404</h1><p>Página não encontrada.</p>")
+			return
+		}
+		s.log.Error("render site page", "error", err)
+		http.Error(w, "Erro ao renderizar a página.", http.StatusInternalServerError)
+		return
+	}
+	s.writeHTML(w, http.StatusOK, body)
+}
+
+func (s *Server) handleSiteConteudos(w http.ResponseWriter, r *http.Request) {
+	s.renderSitePage(w, r, s.site.RenderConteudos, false)
+}
+
+func (s *Server) handleSiteProjetos(w http.ResponseWriter, r *http.Request) {
+	s.renderSitePage(w, r, s.site.RenderProjetos, false)
+}
+
+func (s *Server) handleSiteSobre(w http.ResponseWriter, r *http.Request) {
+	s.renderSitePage(w, r, s.site.RenderSobre, false)
+}
+
+func (s *Server) handleSiteArtigo(w http.ResponseWriter, r *http.Request) {
+	lang := site.NormalizeLang(r.PathValue("lang"))
+	slug := r.PathValue("slug")
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+	body, err := s.site.RenderArtigo(ctx, lang, slug)
+	if err != nil {
+		if errors.Is(err, site.ErrNotFound) {
+			s.writeHTML(w, http.StatusNotFound, "<!doctype html><meta charset=utf-8><h1>404</h1><p>Conteúdo não encontrado.</p>")
+			return
+		}
+		s.log.Error("render artigo", "error", err)
+		http.Error(w, "Erro ao renderizar a página.", http.StatusInternalServerError)
+		return
+	}
+	s.writeHTML(w, http.StatusOK, body)
+}
+
+func (s *Server) handleSiteProjeto(w http.ResponseWriter, r *http.Request) {
+	lang := site.NormalizeLang(r.PathValue("lang"))
+	slug := r.PathValue("slug")
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+	body, err := s.site.RenderProjeto(ctx, lang, slug)
+	if err != nil {
+		if errors.Is(err, site.ErrNotFound) {
+			s.writeHTML(w, http.StatusNotFound, "<!doctype html><meta charset=utf-8><h1>404</h1><p>Projeto não encontrado.</p>")
+			return
+		}
+		s.log.Error("render projeto", "error", err)
+		http.Error(w, "Erro ao renderizar a página.", http.StatusInternalServerError)
+		return
+	}
+	s.writeHTML(w, http.StatusOK, body)
 }
 
 // --- radar (CRUD/listas) ---

@@ -53,6 +53,39 @@ def main():
     st, body, _ = fetch("/site/xx/")
     ok &= expect("/site/xx/ cai para pt (200)", st == 200 and "Washington Viana" in body)
 
+    # conteudos
+    st, body, _ = fetch("/site/pt/conteudos")
+    ok &= expect("/site/pt/conteudos 200", st == 200 and "Conteúdos" in body)
+    import re
+    m = re.search(r'/pt/artigo/([a-z0-9\-]+)', body)
+    if m:
+        slug = m.group(1)
+        st2, b2, _ = fetch(f"/site/pt/artigo/{slug}")
+        ok &= expect(f"/site/pt/artigo/{slug} 200", st2 == 200 and "<article" in b2)
+    else:
+        print("SKIP  artigo (sem artigos publicados no staging)")
+
+    # projetos
+    st, body, _ = fetch("/site/pt/projetos")
+    ok &= expect("/site/pt/projetos 200", st == 200)
+    m = re.search(r'/pt/projeto/([a-z0-9\-]+)', body)
+    if m:
+        slug = m.group(1)
+        st2, b2, _ = fetch(f"/site/pt/projeto/{slug}")
+        ok &= expect(f"/site/pt/projeto/{slug} 200", st2 == 200)
+    else:
+        print("SKIP  projeto (sem projetos ativos no staging)")
+
+    # sobre
+    st, body, _ = fetch("/site/pt/sobre")
+    ok &= expect("/site/pt/sobre 200", st == 200 and "Sobre" in body)
+    st, body, _ = fetch("/site/en/conteudos")
+    ok &= expect("/site/en/conteudos 200", st == 200)
+
+    # 404
+    st, body, _ = fetch("/site/pt/artigo/zz-nao-existe-xyz")
+    ok &= expect("artigo inexistente -> 404", st == 404)
+
     print()
     print("RESULTADO:", "TUDO OK" if ok else "FALHAS ENCONTRADAS")
     return 0 if ok else 1

@@ -49,6 +49,33 @@ func (s *Store) SiteLatestArticles(ctx context.Context, limit int) ([]map[string
 		LIMIT $1`, limit)
 }
 
+// SiteArticleBySlug busca um artigo publicado por slug.
+func (s *Store) SiteArticleBySlug(ctx context.Context, slug string) (map[string]any, error) {
+	return s.queryOne(ctx, `
+		SELECT * FROM artigos
+		WHERE slug = $1 AND ativo = true AND status_publicacao = 'publicado'
+		LIMIT 1`, slug)
+}
+
+// ArtigoI18nRow busca a tradução de um artigo.
+func (s *Store) ArtigoI18nRow(ctx context.Context, artigoID int, lang string) (map[string]any, error) {
+	return s.queryOne(ctx, `
+		SELECT titulo, slug, resumo, conteudo, meta_title, meta_description, og_title, og_description
+		FROM artigos_i18n WHERE artigo_id = $1 AND lang = $2 LIMIT 1`, artigoID, lang)
+}
+
+// SiteProjectBySlug busca um projeto ativo por slug.
+func (s *Store) SiteProjectBySlug(ctx context.Context, slug string) (map[string]any, error) {
+	return s.queryOne(ctx, "SELECT * FROM projetos WHERE slug = $1 AND ativo = true LIMIT 1", slug)
+}
+
+// ProjetoI18nRow busca a tradução de um projeto.
+func (s *Store) ProjetoI18nRow(ctx context.Context, projetoID int, lang string) (map[string]any, error) {
+	return s.queryOne(ctx, `
+		SELECT titulo, slug, descricao, meta_title, meta_description, og_title, og_description
+		FROM projetos_i18n WHERE projeto_id = $1 AND lang = $2 LIMIT 1`, projetoID, lang)
+}
+
 // SiteFeaturedProjects lista projetos ativos (destaques primeiro).
 func (s *Store) SiteFeaturedProjects(ctx context.Context, limit int) ([]map[string]any, error) {
 	if limit <= 0 {
