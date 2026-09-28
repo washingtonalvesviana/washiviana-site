@@ -1,0 +1,12 @@
+# Binários
+/bin/
+*.exe
+washiviana-api
+washiviana-worker
+
+# Ambiente (segredos) — nunca versionar
+.env
+*.env
+
+# Logs
+*.log

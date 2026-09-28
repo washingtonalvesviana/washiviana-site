@@ -1,0 +1,318 @@
+openapi: 3.0.3
+info:
+  title: Washiviana API (contrato atual)
+  version: "0.1.0"
+  description: >
+    Esqueleto do contrato atual da API PHP (action-based). Serve de base para o
+    backend Go e para os contract tests PHP x Go. Expandir conforme 03-CONTRATO-API.md.
+    Autenticação por cookie de sessão PHP (washiviana_sess) + CSRF em escritas.
+servers:
+  - url: https://washiviana.com
+    description: Produção
+  - url: http://localhost:8081
+    description: Novo backend Go (staging / transição)
+
+security:
+  - sessionCookie: []
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: washiviana_sess
+  schemas:
+    ApiEnvelope:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+      required: [success]
+    Error:
+      allOf:
+        - $ref: '#/components/schemas/ApiEnvelope'
+        - type: object
+          properties:
+            details: {}
+    Artigo:
+      type: object
+      properties:
+        id: { type: integer }
+        titulo: { type: string }
+        slug: { type: string }
+        resumo: { type: string }
+        conteudo: { type: string }
+        categoria_id: { type: integer, nullable: true }
+        autor: { type: string }
+        destaque: { type: boolean }
+        ativo: { type: boolean }
+        status: { type: string, enum: [rascunho, agendado, publicado] }
+        tipo_midia: { type: string, enum: [imagem, video] }
+        imagem_principal: { type: string, nullable: true }
+        imagem_1x1: { type: string, nullable: true }
+        imagem_9x16: { type: string, nullable: true }
+        redes_destino: { type: object, nullable: true }
+        data_agendamento: { type: string, format: date-time, nullable: true }
+        created_at: { type: string }
+        updated_at: { type: string }
+    Projeto:
+      type: object
+      properties:
+        id: { type: integer }
+        titulo: { type: string }
+        slug: { type: string }
+        descricao: { type: string }
+        categoria_id: { type: integer, nullable: true }
+        tecnologias: { type: string }
+        url_projeto: { type: string, nullable: true }
+        destaque: { type: boolean }
+        ativo: { type: boolean }
+        ordem: { type: integer }
+    Categoria:
+      type: object
+      properties:
+        id: { type: integer }
+        nome: { type: string }
+        slug: { type: string }
+        ordem: { type: integer }
+        ativo: { type: boolean }
+
+paths:
+  /api/auth.php:
+    post:
+      summary: Autenticação do admin (action-based)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                action: { type: string, enum: [login, logout, check, change_password] }
+                email: { type: string }
+                senha: { type: string }
+                current_password: { type: string }
+                password: { type: string }
+                confirm_password: { type: string }
+                csrf_token: { type: string }
+              required: [action]
+      responses:
+        '200':
+          description: Resultado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiEnvelope' }
+
+  /api/artigos.php:
+    post:
+      summary: CRUD e publicação de artigos (action-based)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [create, update, delete, get, list, get_publicacoes,
+                         list_social_variants, save_social_variant,
+                         delete_social_variant, publish_social_variant,
+                         delete_linkedin_post, get_linkedin_status, publish_now_linkedin]
+                id: { type: integer }
+                artigo_id: { type: integer }
+                titulo: { type: string }
+                resumo: { type: string }
+                conteudo: { type: string }
+                categoria_id: { type: integer }
+                autor: { type: string }
+                tipo_midia: { type: string, enum: [imagem, video] }
+                status_publicacao: { type: string }
+                data_agendamento: { type: string }
+                redes_destino: { type: string, description: JSON }
+                csrf_token: { type: string }
+              required: [action]
+      responses:
+        '200':
+          description: Resultado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiEnvelope' }
+        '401': { description: Não autenticado }
+        '403': { description: Sessão expirada / CSRF }
+
+  /api/projetos.php:
+    post:
+      summary: CRUD de projetos (action-based)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [listar, list, buscar, get, criar, create, atualizar, update,
+                         deletar, delete, ordenar, order, toggle_status, toggle_destaque,
+                         save_linkedin_post, get_linkedin_post, delete_media]
+              required: [action]
+      responses:
+        '200': { description: Resultado }
+
+  /api/categorias.php:
+    post:
+      summary: CRUD de categorias (action-based)
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [listar, buscar, criar, atualizar, deletar, ordenar, toggle_status]
+                target: { type: string, enum: [projetos, artigos] }
+                id: { type: integer }
+                nome: { type: string }
+              required: [action]
+      responses:
+        '200': { description: Resultado }
+
+  /api/gemini.php:
+    post:
+      summary: Geração de IA (texto, imagem, artigo, social)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [test, generate_text, generate_image, generate_images_multi,
+                         generate_article, generate_social_agent]
+                prompt: { type: string }
+                tema: { type: string }
+                rede: { type: string }
+                csrf_token: { type: string }
+              required: [action]
+      responses:
+        '200': { description: Resultado }
+
+  /api/llm-models.php:
+    get:
+      summary: Lista modelos do provedor de IA configurado
+      parameters:
+        - in: query
+          name: provider
+          schema: { type: string, enum: [gemini, openai, deepseek, openrouter, anthropic, ollama] }
+        - in: query
+          name: api_key
+          schema: { type: string }
+        - in: query
+          name: openai_base_url
+          schema: { type: string }
+        - in: query
+          name: ollama_base_url
+          schema: { type: string }
+      responses:
+        '200': { description: Lista de modelos }
+
+  /api/i18n_seo.php:
+    post:
+      summary: Gera traduções/SEO de artigos e projetos
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                entity: { type: string, enum: [artigo, projeto] }
+                id: { type: integer }
+                langs: { type: string, description: "ex.: pt,en,es" }
+                csrf_token: { type: string }
+              required: [entity, id]
+      responses:
+        '200': { description: "Traduções/SEO gerados" }
+
+  /api/get_i18n_seo.php:
+    get:
+      summary: Obtém dados de i18n/SEO de uma entidade
+      parameters:
+        - in: query
+          name: entity
+          schema: { type: string, enum: [artigo, projeto] }
+        - in: query
+          name: id
+          schema: { type: integer }
+        - in: query
+          name: lang
+          schema: { type: string, enum: [pt, en, es] }
+      responses:
+        '200': { description: Dados de SEO }
+
+  /api/i18n_status.php:
+    post:
+      summary: Atualiza status de tradução
+      responses:
+        '200': { description: Status atualizado }
+
+  /api/upload.php:
+    post:
+      summary: Upload/exclusão de arquivos
+      responses:
+        '200': { description: Arquivo salvo/removido }
+
+  /api/videos.php:
+    post:
+      summary: Fila de vídeo
+      responses:
+        '200': { description: Job enfileirado/status }
+
+  /api/radar.php:
+    post:
+      summary: Radar de tendências (topics, sources, items, ideas, collect)
+      responses:
+        '200': { description: Resultado }
+
+  /api/redes-sociais.php:
+    post:
+      summary: Configuração de redes sociais
+      responses:
+        '200': { description: Config salva }
+
+  /api/linkedin.php:
+    post:
+      summary: Publicação LinkedIn (post/article/image/video, delete)
+      responses:
+        '200': { description: Resultado }
+
+  /api/configuracoes.php:
+    get:
+      summary: Lista configurações (chave/valor)
+      responses:
+        '200': { description: Configurações }
+
+  /api/configuracoes-save.php:
+    post:
+      summary: Salva uma configuração
+      responses:
+        '200': { description: Configuração salva }
+
+  /api/csrf.php:
+    get:
+      summary: Obtém token CSRF
+      responses:
+        '200': { description: "Token CSRF" }
+
+  /api/metrics.php:
+    post:
+      summary: Beacon de acesso (same-origin, sem auth)
+      security: []
+      responses:
+        '200': { description: Registrado }
