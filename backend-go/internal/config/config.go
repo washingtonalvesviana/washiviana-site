@@ -21,6 +21,7 @@ type Config struct {
 	SessionTTL    time.Duration
 	UploadDir     string
 	UploadURL     string
+	SiteBaseURL   string
 }
 
 // Load lê a configuração do ambiente. DATABASE_URL tem prioridade; se ausente,
@@ -57,6 +58,7 @@ func Load() (Config, error) {
 
 	c.UploadDir = getenv("UPLOAD_DIR", "/var/www/washiviana.com/uploads")
 	c.UploadURL = getenv("UPLOAD_URL", "/uploads/")
+	c.SiteBaseURL = getenv("SITE_BASE_URL", "https://washiviana.com")
 
 	return c, nil
 }

@@ -22,6 +22,20 @@
 - [x] **(4) `COOKIE_SECURE=1`** definido no `api-prod.env` (produção HTTPS). Testes locais em HTTP seguem com a instância de staging (`COOKIE_SECURE=0`).
 - [ ] Publicação real em redes (LinkedIn/Meta) — depende de tokens OAuth válidos.
 
+## Programa "eliminar o PHP" (em andamento)
+
+- [x] **(a) Worker `metrics` cortado para Go**: systemd `washiviana-go-metrics.{service,timer}` (6h) ativo; `washiviana-metrics.timer` (PHP) **desabilitado antes** (sem duplicação). Validado contra produção: chamou a API real do LinkedIn e tratou "token expirado" com graça (`fail`, sem crash).
+- [ ] (a) Worker `video` (executor FFmpeg + provedores) — **bloqueado por mídia/credenciais** para validar; hoje só `--dry-run`.
+- [x] (b, parcial) **Vídeos (fila)** → Go: `POST /api/v1/videos/enqueue` e `GET /api/v1/videos/jobs/{id}`. Divergência: sem auto-geração de imagens via script PHP (exige gerar imagens antes). `videos_beacon_test.py`.
+- [x] (b, parcial) **Beacon de métricas** → Go: `POST /api/v1/metrics/beacon` (same-origin + rate limit 60s por ip+path). `videos_beacon_test.py` **10/10 PASS**.
+- [ ] (b) Demais endpoints → Go: auth.php legado, i18n_site, radar (+ radar_lib), linkedin/facebook/instagram, oauth callbacks (`linkedin-callback.php`, `oauth_callback.php`), gemini-models e publicação (gated).
+- [ ] (c) Site público → Go/Next.js (strangler) — **próximo grande bloco**.
+- [ ] (d) Aposentar admin/site PHP após paridade.
+- [ ] (e) Otimização de imagem (GD) + `generate_images_multi` (1:1/9:16).
+- [ ] (f) CI rodando as suítes.
+
+> Workers ainda em PHP: `washiviana-articles-publish` (publicação agendada — depende de tokens) e `washiviana-video-worker`.
+
 ## ⚠️ Bloqueio do e-mail de conclusão
 
 - A notificação para `washingtonalvesviana@gmail.com` **não pôde ser enviada**: o servidor **não tem MTA** (`/usr/sbin/sendmail` ausente; sem postfix/msmtp; `mail()` e `sendNotificationEmail()` retornam falha com `"/usr/sbin/sendmail: not found"`).

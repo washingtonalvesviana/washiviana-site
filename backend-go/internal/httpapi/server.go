@@ -11,6 +11,7 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -101,6 +102,13 @@ func (s *Server) Routes() http.Handler {
 	// Redes sociais (config)
 	mux.HandleFunc("GET /api/v1/redes-sociais", s.handleRedesList)
 	mux.HandleFunc("POST /api/v1/redes-sociais", s.writeGuard(s.handleRedeSave))
+
+	// Vídeos (fila)
+	mux.HandleFunc("POST /api/v1/videos/enqueue", s.writeGuard(s.handleVideoEnqueue))
+	mux.HandleFunc("GET /api/v1/videos/jobs/{id}", s.handleVideoJobStatus)
+
+	// Beacon de acessos (público, same-origin)
+	mux.HandleFunc("POST /api/v1/metrics/beacon", s.handleMetricsBeacon)
 
 	// SEO/Traduções (escrita)
 	mux.HandleFunc("POST /api/v1/i18n/generate", s.writeGuard(s.handleI18nGenerate))
@@ -1531,6 +1539,210 @@ func (s *Server) handleRedeSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "Configuração salva."})
+}
+
+// --- vídeos ---
+
+func (s *Server) handleVideoEnqueue(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID               int     `json:"id"`
+		DurationPerImage int     `json:"duration_per_image"`
+		MusicFile        *string `json:"music_file"`
+		Resolution       string  `json:"resolution"`
+	}
+	if !s.decodeJSON(w, r, &body) {
+		return
+	}
+	if body.ID <= 0 {
+		writeJSON(w, http.StatusOK, map[string]any{"success": false, "message": "id não fornecido"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+	defer cancel()
+
+	imgs, err := s.store.GetVariantImages(ctx, body.ID)
+	if err != nil {
+		s.fail(w, "variant images", err, "Erro ao enfileirar vídeo.")
+		return
+	}
+	if !imgs.Found {
+		writeJSON(w, http.StatusOK, map[string]any{"success": false, "message": "Variante não encontrada"})
+		return
+	}
+	if !imgs.HasImages() {
+		// Divergência consciente: o Go não executa o script PHP de geração automática de imagens.
+		writeJSON(w, http.StatusOK, map[string]any{
+			"success": false,
+			"message": "Variante sem imagens. Gere as imagens (IA) antes de enfileirar o vídeo.",
+		})
+		return
+	}
+
+	cfg, err := s.store.GetConfiguracoes(ctx, []string{"llm_video_provider", "llm_video_model"})
+	if err != nil {
+		s.fail(w, "video config", err, "Erro ao enfileirar vídeo.")
+		return
+	}
+	provider := strings.TrimSpace(cfg["llm_video_provider"])
+	if provider == "" {
+		provider = "gemini"
+	}
+	model := strings.TrimSpace(cfg["llm_video_model"])
+	resolution := strings.TrimSpace(body.Resolution)
+	if resolution == "" {
+		resolution = "1080x1920"
+	}
+	duration := body.DurationPerImage
+	if duration <= 0 {
+		duration = 3
+	}
+	params := map[string]any{
+		"duration_per_image": duration,
+		"music_file":         body.MusicFile,
+		"resolution":         resolution,
+		"video_provider":     provider,
+		"video_model":        model,
+		"video_engine":       "auto",
+	}
+	paramsJSON, _ := json.Marshal(params)
+
+	jobID, err := s.store.EnqueueVideoJob(ctx, body.ID, string(paramsJSON))
+	if err != nil {
+		s.fail(w, "enqueue video", err, "Erro ao enfileirar vídeo.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success":  true,
+		"job_id":   jobID,
+		"provider": provider,
+		"model":    model,
+		"engine":   "auto",
+		"message":  "Job enfileirado",
+	})
+}
+
+func (s *Server) handleVideoJobStatus(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
+		writeJSON(w, http.StatusOK, map[string]any{"success": false, "message": "job_id não fornecido"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	defer cancel()
+
+	job, err := s.store.GetVideoJob(ctx, id)
+	if err != nil {
+		s.fail(w, "video job", err, "Erro ao buscar job.")
+		return
+	}
+	if job == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"success": false, "message": "Job não encontrado"})
+		return
+	}
+	if of, ok := job["output_file"].(string); ok && of != "" {
+		job["output_url"] = strings.TrimRight(s.cfg.UploadURL, "/") + "/" + of
+	}
+	provider, model, engine := "", "", "ffmpeg"
+	if raw, ok := job["params"].(string); ok && raw != "" {
+		var p map[string]any
+		if json.Unmarshal([]byte(raw), &p) == nil {
+			if v, ok := p["video_provider"].(string); ok {
+				provider = v
+			}
+			if v, ok := p["video_model"].(string); ok {
+				model = v
+			}
+			if v, ok := p["video_engine"].(string); ok && v != "" {
+				engine = v
+			}
+		}
+	}
+	job["provider"] = provider
+	job["model"] = model
+	job["engine"] = engine
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "job": job})
+}
+
+// --- beacon de acessos ---
+
+func (s *Server) handleMetricsBeacon(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{"success": false, "message": "Método não permitido."})
+		return
+	}
+	if !sameOrigin(r, s.cfg.SiteBaseURL) {
+		writeJSON(w, http.StatusForbidden, map[string]any{"success": false, "message": "Origem não permitida."})
+		return
+	}
+	var body struct {
+		Path string `json:"path"`
+		UA   string `json:"ua"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&body) // corpo é opcional
+
+	path := strings.TrimSpace(body.Path)
+	if path == "" {
+		path = r.URL.RequestURI()
+		if path == "" {
+			path = "/"
+		}
+	}
+	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		if u, err := url.Parse(path); err == nil {
+			path = u.Path
+		}
+	}
+	if len(path) > 500 {
+		path = path[:500]
+	}
+	ua := strings.TrimSpace(body.UA)
+	if ua == "" {
+		ua = r.UserAgent()
+	}
+	if len(ua) > 500 {
+		ua = ua[:500]
+	}
+	ipStr := clientIP(r)
+	var ip *string
+	if ipStr != "" {
+		ip = &ipStr
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	defer cancel()
+
+	if ip != nil {
+		last, err := s.store.RecentSiteAccess(ctx, *ip, path)
+		if err == nil && last != nil && time.Since(*last) < 60*time.Second {
+			writeJSON(w, http.StatusOK, map[string]any{"success": true, "skipped": true})
+			return
+		}
+	}
+	if err := s.store.InsertSiteAccess(ctx, path, ua, ip); err != nil {
+		s.fail(w, "metrics beacon", err, "Não foi possível registrar acesso.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true})
+}
+
+func sameOrigin(r *http.Request, baseURL string) bool {
+	base, err := url.Parse(baseURL)
+	if err != nil || base.Hostname() == "" {
+		return false
+	}
+	host := base.Hostname()
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		origin = r.Referer()
+	}
+	if origin == "" {
+		return true // sem Origin/Referer: aceita (como o PHP)
+	}
+	u, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(u.Hostname(), host)
 }
 
 // --- SEO/traduções ---
