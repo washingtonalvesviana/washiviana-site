@@ -1,0 +1,293 @@
+// Package site renderiza páginas públicas (migração strangler do site PHP).
+package site
+
+import (
+	"context"
+	"fmt"
+	"html"
+	"strings"
+
+	"washiviana/backend/internal/config"
+	"washiviana/backend/internal/store"
+)
+
+// Service renderiza o site público.
+type Service struct {
+	store *store.Store
+	cfg   config.Config
+}
+
+// New cria o serviço.
+func New(st *store.Store, cfg config.Config) *Service {
+	return &Service{store: st, cfg: cfg}
+}
+
+var siteConfigKeys = []string{
+	"site_titulo", "site_subtitulo", "home_frase_impacto", "mini_bio",
+	"site_email", "site_linkedin", "site_instagram", "site_github",
+	"home_card_1_icon", "home_card_1_titulo", "home_card_1_subtexto", "home_card_1_link",
+	"home_card_2_icon", "home_card_2_titulo", "home_card_2_subtexto", "home_card_2_link",
+	"home_card_3_icon", "home_card_3_titulo", "home_card_3_subtexto", "home_card_3_link",
+	"home_card_4_icon", "home_card_4_titulo", "home_card_4_subtexto", "home_card_4_link",
+}
+
+// ptDefaults são os textos PT-BR de fallback (espelham i18n_site.php).
+var ptDefaults = map[string]string{
+	"nav.home": "Início", "nav.contents": "Conteúdos", "nav.projects": "Projetos",
+	"nav.about": "Sobre", "nav.contact": "Contato",
+	"hero.cta_contents": "Explorar Conteúdos", "hero.cta_projects": "Ver Projetos",
+	"home.section_find": "O que você vai encontrar aqui",
+	"home.latest":       "Últimos conteúdos", "home.soon": "Conteúdos em breve...",
+	"home.view_all_contents": "Ver todos os conteúdos →",
+	"home.about_title":       "Um pouco sobre mim", "home.about_cta": "Conheça minha trajetória",
+	"footer.menu": "Menu", "footer.rights": "Todos os direitos reservados.", "footer.admin": "Área Administrativa",
+	"contents.page_title": "Conteúdos", "projects.page_title_all": "Todos os Projetos",
+}
+
+func (s *Service) strings(ctx context.Context, lang string) (map[string]string, map[string]string) {
+	out := map[string]string{}
+	for k, v := range ptDefaults {
+		out[k] = v
+	}
+	if db, err := s.store.SiteUIStrings(ctx, lang); err == nil {
+		for k, v := range db {
+			if strings.TrimSpace(v) != "" {
+				out[k] = v
+			}
+		}
+	}
+	cfgI18n := map[string]string{}
+	if m, err := s.store.SiteConfigI18n(ctx, lang); err == nil {
+		cfgI18n = m
+	}
+	return out, cfgI18n
+}
+
+// RenderHome devolve o HTML da home para o idioma.
+func (s *Service) RenderHome(ctx context.Context, lang string) (string, error) {
+	cfg, err := s.store.GetConfiguracoes(ctx, siteConfigKeys)
+	if err != nil {
+		return "", err
+	}
+	tr, cfgI18n := s.strings(ctx, lang)
+
+	pick := func(key string) string {
+		if lang != "pt" {
+			if v, ok := cfgI18n[key]; ok && strings.TrimSpace(v) != "" {
+				return v
+			}
+		}
+		return cfg[key]
+	}
+	t := func(key string) string { return tr[key] }
+
+	titulo := cfg["site_titulo"]
+	if titulo == "" {
+		titulo = "Washiviana"
+	}
+	subtitulo := pick("site_subtitulo")
+	frase := pick("home_frase_impacto")
+	bio := pick("mini_bio")
+
+	articles, _ := s.store.SiteLatestArticles(ctx, 6)
+	projects, _ := s.store.SiteFeaturedProjects(ctx, 6)
+
+	base := strings.TrimRight(s.cfg.SiteBaseURL, "/")
+	homePath := "/site/" + lang + "/"
+	canonical := base + homePath
+
+	var b strings.Builder
+	b.WriteString("<!doctype html>\n<html lang=\"" + htmlLang(lang) + "\">\n<head>\n")
+	b.WriteString("<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n")
+	b.WriteString("<title>" + esc(titulo) + (subtituloOf(subtitulo)) + "</title>\n")
+	b.WriteString("<meta name=\"description\" content=\"" + esc(frase) + "\">\n")
+	b.WriteString("<link rel=\"canonical\" href=\"" + esc(canonical) + "\">\n")
+	for _, l := range []string{"pt", "en", "es"} {
+		b.WriteString("<link rel=\"alternate\" hreflang=\"" + l + "\" href=\"" + esc(base+"/site/"+l+"/") + "\">\n")
+	}
+	b.WriteString("<meta property=\"og:type\" content=\"website\">\n")
+	b.WriteString("<meta property=\"og:title\" content=\"" + esc(titulo+" - "+subtitulo) + "\">\n")
+	b.WriteString("<meta property=\"og:description\" content=\"" + esc(frase) + "\">\n")
+	b.WriteString("<meta property=\"og:url\" content=\"" + esc(canonical) + "\">\n")
+	b.WriteString("<link rel=\"stylesheet\" href=\"/assets/css/tailwind.min.css\">\n")
+	b.WriteString("</head>\n<body class=\"bg-white text-neutral-800 antialiased\">\n")
+
+	// Header / nav
+	b.WriteString("<header class=\"max-w-5xl mx-auto flex items-center justify-between px-4 py-5\">\n")
+	b.WriteString("<a href=\"/site/" + lang + "/\" class=\"font-bold text-lg\">" + esc(titulo) + "</a>\n")
+	b.WriteString("<nav class=\"flex items-center gap-5 text-sm\">")
+	b.WriteString(nav(lang, "/conteudos", t("nav.contents")))
+	b.WriteString(nav(lang, "/projetos", t("nav.projects")))
+	b.WriteString(nav(lang, "/sobre", t("nav.about")))
+	b.WriteString("<span class=\"text-neutral-300\">|</span>")
+	for _, l := range []string{"pt", "en", "es"} {
+		cls := "hover:underline"
+		if l == lang {
+			cls = "font-semibold underline"
+		}
+		b.WriteString("<a class=\"" + cls + "\" href=\"/site/" + l + "/\">" + strings.ToUpper(l) + "</a>")
+	}
+	b.WriteString("</nav></header>\n")
+
+	// Hero
+	b.WriteString("<section class=\"max-w-5xl mx-auto px-4 py-14\">\n")
+	b.WriteString("<h1 class=\"text-4xl sm:text-5xl font-black tracking-tight\">" + esc(titulo) + "</h1>\n")
+	b.WriteString("<p class=\"mt-3 text-xl text-neutral-600\">" + esc(subtitulo) + "</p>\n")
+	b.WriteString("<p class=\"mt-6 max-w-3xl text-neutral-700\">" + esc(frase) + "</p>\n")
+	b.WriteString("<div class=\"mt-8 flex gap-3\">")
+	b.WriteString(btn(lang, "/conteudos", t("hero.cta_contents"), "primary"))
+	b.WriteString(btn(lang, "/projetos", t("hero.cta_projects"), ""))
+	b.WriteString("</div></section>\n")
+
+	// Cards
+	b.WriteString("<section class=\"max-w-5xl mx-auto px-4 py-10\">\n")
+	b.WriteString("<h2 class=\"text-2xl font-bold mb-6\">" + esc(t("home.section_find")) + "</h2>\n")
+	b.WriteString("<div class=\"grid sm:grid-cols-2 lg:grid-cols-4 gap-4\">\n")
+	for i := 1; i <= 4; i++ {
+		key := fmt.Sprintf("home_card_%d", i)
+		ct := pick(key + "_titulo")
+		if ct == "" {
+			continue
+		}
+		cs := pick(key + "_subtexto")
+		cl := pick(key + "_link")
+		href := cl
+		if href == "" {
+			href = "/" + lang + "/"
+		}
+		b.WriteString("<a href=\"" + esc(href) + "\" class=\"block rounded-xl border border-neutral-200 p-5 hover:shadow-sm\">")
+		b.WriteString("<div class=\"font-semibold\">" + esc(ct) + "</div>")
+		b.WriteString("<p class=\"text-sm text-neutral-600 mt-2\">" + esc(cs) + "</p></a>\n")
+	}
+	b.WriteString("</div></section>\n")
+
+	// Latest articles
+	b.WriteString("<section class=\"max-w-5xl mx-auto px-4 py-10\">\n")
+	b.WriteString("<div class=\"flex items-center justify-between mb-6\"><h2 class=\"text-2xl font-bold\">" + esc(t("home.latest")) + "</h2>")
+	b.WriteString("<a class=\"text-sm text-emerald-700 hover:underline\" href=\"/" + lang + "/conteudos\">" + esc(t("home.view_all_contents")) + "</a></div>\n")
+	if len(articles) == 0 {
+		b.WriteString("<p class=\"text-neutral-500\">" + esc(t("home.soon")) + "</p>\n")
+	} else {
+		b.WriteString("<ul class=\"grid sm:grid-cols-2 gap-5\">\n")
+		for _, a := range articles {
+			slug := asStr(a["slug"])
+			b.WriteString("<li><a class=\"block hover:underline\" href=\"/" + lang + "/artigo/" + esc(slug) + "\">")
+			b.WriteString("<span class=\"text-lg font-semibold\">" + esc(asStr(a["titulo"])) + "</span>")
+			if r := asStr(a["resumo"]); r != "" {
+				b.WriteString("<p class=\"text-sm text-neutral-600 mt-1\">" + esc(truncate(r, 160)) + "</p>")
+			}
+			b.WriteString("</a></li>\n")
+		}
+		b.WriteString("</ul>\n")
+	}
+	b.WriteString("</section>\n")
+
+	// Projects
+	b.WriteString("<section class=\"max-w-5xl mx-auto px-4 py-10\">\n")
+	b.WriteString("<h2 class=\"text-2xl font-bold mb-6\">" + esc(t("projects.page_title_all")) + "</h2>\n")
+	if len(projects) > 0 {
+		b.WriteString("<ul class=\"grid sm:grid-cols-2 lg:grid-cols-3 gap-5\">\n")
+		for _, p := range projects {
+			slug := asStr(p["slug"])
+			b.WriteString("<li class=\"rounded-xl border border-neutral-200 p-5\">")
+			b.WriteString("<a class=\"font-semibold hover:underline\" href=\"/" + lang + "/projeto/" + esc(slug) + "\">" + esc(asStr(p["titulo"])) + "</a>")
+			if d := asStr(p["descricao"]); d != "" {
+				b.WriteString("<p class=\"text-sm text-neutral-600 mt-2\">" + esc(truncate(d, 140)) + "</p>")
+			}
+			b.WriteString("</li>\n")
+		}
+		b.WriteString("</ul>\n")
+	}
+	b.WriteString("</section>\n")
+
+	// About
+	if strings.TrimSpace(bio) != "" {
+		b.WriteString("<section class=\"max-w-5xl mx-auto px-4 py-10\">\n")
+		b.WriteString("<h2 class=\"text-2xl font-bold mb-4\">" + esc(t("home.about_title")) + "</h2>\n")
+		b.WriteString("<div class=\"prose max-w-3xl text-neutral-700\">" + bio + "</div>\n")
+		b.WriteString("<a class=\"inline-block mt-4 text-emerald-700 hover:underline\" href=\"/" + lang + "/sobre\">" + esc(t("home.about_cta")) + "</a>\n")
+		b.WriteString("</section>\n")
+	}
+
+	// Footer
+	b.WriteString("<footer class=\"border-t border-neutral-200 mt-10\">\n<div class=\"max-w-5xl mx-auto px-4 py-8 text-sm text-neutral-600 flex flex-wrap items-center gap-4 justify-between\">\n")
+	b.WriteString("<span>© " + esc(titulo) + " — " + esc(t("footer.rights")) + "</span>\n")
+	var social []string
+	if v := cfg["site_linkedin"]; v != "" {
+		social = append(social, "<a class=\"hover:underline\" href=\""+esc(v)+"\">LinkedIn</a>")
+	}
+	if v := cfg["site_instagram"]; v != "" {
+		social = append(social, "<a class=\"hover:underline\" href=\""+esc(v)+"\">Instagram</a>")
+	}
+	if v := cfg["site_github"]; v != "" {
+		social = append(social, "<a class=\"hover:underline\" href=\""+esc(v)+"\">GitHub</a>")
+	}
+	if v := cfg["site_email"]; v != "" {
+		social = append(social, "<a class=\"hover:underline\" href=\"mailto:"+esc(v)+"\">E-mail</a>")
+	}
+	b.WriteString("<span class=\"flex gap-4\">" + strings.Join(social, "") + "</span>\n")
+	b.WriteString("</div></footer>\n")
+
+	b.WriteString("</body></html>\n")
+	return b.String(), nil
+}
+
+func nav(lang, path, label string) string {
+	return "<a class=\"hover:underline\" href=\"/" + lang + path + "\">" + html.EscapeString(label) + "</a>"
+}
+
+func btn(lang, path, label, kind string) string {
+	cls := "inline-block rounded-lg border border-neutral-300 px-5 py-2.5 text-sm hover:bg-neutral-50"
+	if kind == "primary" {
+		cls = "inline-block rounded-lg bg-emerald-700 text-white px-5 py-2.5 text-sm hover:bg-emerald-800"
+	}
+	return "<a class=\"" + cls + "\" href=\"/" + lang + path + "\">" + html.EscapeString(label) + "</a>"
+}
+
+func esc(s string) string { return html.EscapeString(s) }
+
+func htmlLang(lang string) string {
+	switch lang {
+	case "pt":
+		return "pt-BR"
+	case "en":
+		return "en"
+	case "es":
+		return "es"
+	}
+	return "pt-BR"
+}
+
+func subtituloOf(sub string) string {
+	if strings.TrimSpace(sub) == "" {
+		return ""
+	}
+	return " — " + esc(sub)
+}
+
+func asStr(v any) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
+}
+
+func truncate(s string, max int) string {
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	return string(r[:max]) + "…"
+}
+
+// NormalizeLang valida o idioma (default pt).
+func NormalizeLang(l string) string {
+	switch strings.ToLower(strings.TrimSpace(l)) {
+	case "en":
+		return "en"
+	case "es":
+		return "es"
+	default:
+		return "pt"
+	}
+}

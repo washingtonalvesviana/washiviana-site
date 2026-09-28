@@ -24,6 +24,7 @@ import (
 	"washiviana/backend/internal/i18n"
 	"washiviana/backend/internal/i18nsite"
 	"washiviana/backend/internal/radar"
+	"washiviana/backend/internal/site"
 	"washiviana/backend/internal/store"
 	"washiviana/backend/internal/textutil"
 
@@ -45,6 +46,7 @@ type Server struct {
 	i18n    *i18n.Service
 	i18nSvc *i18nsite.Service
 	radar   *radar.Service
+	site    *site.Service
 	log     *slog.Logger
 }
 
@@ -54,7 +56,8 @@ func New(cfg config.Config, st *store.Store, authSvc *auth.Service, log *slog.Lo
 	return &Server{
 		cfg: cfg, store: st, auth: authSvc, ai: aiSvc,
 		i18n: i18n.New(st, aiSvc), i18nSvc: i18nsite.New(st, aiSvc),
-		radar: radar.New(st, aiSvc, radar.CollectConfig{AllowLoopback: cfg.AllowLoopbackFetch}), log: log,
+		radar: radar.New(st, aiSvc, radar.CollectConfig{AllowLoopback: cfg.AllowLoopbackFetch}),
+		site:  site.New(st, cfg), log: log,
 	}
 }
 
@@ -122,6 +125,11 @@ func (s *Server) Routes() http.Handler {
 
 	// Beacon de acessos (público, same-origin)
 	mux.HandleFunc("POST /api/v1/metrics/beacon", s.handleMetricsBeacon)
+
+	// Site público (strangler; sem cutover ainda)
+	mux.HandleFunc("GET /site", s.handleSiteRoot)
+	mux.HandleFunc("GET /site/", s.handleSiteRoot)
+	mux.HandleFunc("GET /site/{lang}/", s.handleSiteHome)
 
 	// Radar (temas, fontes, itens, ideias — CRUD/listas)
 	mux.HandleFunc("GET /api/v1/radar/topics", s.handleRadarTopicsList)
@@ -1661,6 +1669,27 @@ func (s *Server) handleRedeSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "Configuração salva."})
+}
+
+// --- site público (strangler) ---
+
+func (s *Server) handleSiteRoot(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/site/pt/", http.StatusFound)
+}
+
+func (s *Server) handleSiteHome(w http.ResponseWriter, r *http.Request) {
+	lang := site.NormalizeLang(r.PathValue("lang"))
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+
+	body, err := s.site.RenderHome(ctx, lang)
+	if err != nil {
+		s.log.Error("render site home", "error", err)
+		http.Error(w, "Erro ao renderizar a página.", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write([]byte(body))
 }
 
 // --- radar (CRUD/listas) ---

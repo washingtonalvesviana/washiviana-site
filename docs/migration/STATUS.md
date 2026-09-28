@@ -38,7 +38,8 @@
   - Nota: bypass de loopback para testes via `ALLOW_LOOPBACK_FETCH=1` (apenas no staging; produção `false`).
   - Adiado (documentado): backup CSV no delete de itens.
 - [ ] (b) Demais endpoints → Go: linkedin/facebook/instagram, oauth callbacks (`linkedin-callback.php`, `oauth_callback.php`), categorias i18n e publicação (gated).
-- [ ] (c) Site público → Go/Next.js (strangler) — **próximo grande bloco**.
+- [~] (c) **Site público → Go (strangler — sem cutover)**: home pt/en/es renderizada no Go em `GET /site/{lang}/` (título/subtítulo/frase/bio, cards, últimos artigos, projetos, SEO: canonical/hreflang/OG, CSS Tailwind do site). `site_test.py` **17/17 PASS**.
+  - **Não** roteado no nginx público (site PHP continua no ar). Próximo: demais páginas (conteudos/projetos/sobre/artigo/projeto/sitemap) + `i18n.php`/`i18n_ui.php`, e cutover **após sua validação de design/SEO**.
 - [ ] (d) Aposentar admin/site PHP após paridade.
 - [x] (e, parcial) **`generate_images_multi`** → Go: `POST /api/v1/ai/images-multi` gera a imagem base e cria recortes **1:1** e **9:16** (`ai_1x1_*.jpg`/`ai_9x16_*.jpg`), removendo a base. `images_multi_test.py` **6/6 PASS**.
   - **Otimizador portado** (`internal/ai/optimize.go`): resize bilinear sem ampliar + recompressão JPEG até ≤500KB (qualidade 85→60), aplicado aos recortes (1200x1200 e 1080x1920), como no PHP.
