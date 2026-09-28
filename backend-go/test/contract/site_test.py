@@ -93,6 +93,15 @@ def main():
     ok &= expect("sitemap páginas estáticas", "/pt/conteudos" in body and "/en/projetos" in body and "/es/sobre" in body)
     ok &= expect("sitemap URLs de artigo", "/pt/artigo/" in body)
 
+    # robots
+    st, body, headers = fetch("/site/robots.txt")
+    ok &= expect("robots 200 text", st == 200 and "text/plain" in headers.get("Content-Type", "") and "Sitemap:" in body)
+
+    # landings
+    for path in ("/site/pt/automacao-ia", "/site/pt/tech-insights", "/site/pt/design-experiencias", "/site/en/automacao-ia"):
+        st, body, _ = fetch(path)
+        ok &= expect(f"{path} 200", st == 200 and "<h1" in body)
+
     print()
     print("RESULTADO:", "TUDO OK" if ok else "FALHAS ENCONTRADAS")
     return 0 if ok else 1

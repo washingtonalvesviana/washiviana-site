@@ -136,6 +136,10 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /site/{lang}/artigo/{slug}", s.handleSiteArtigo)
 	mux.HandleFunc("GET /site/{lang}/projeto/{slug}", s.handleSiteProjeto)
 	mux.HandleFunc("GET /site/sitemap.xml", s.handleSiteSitemap)
+	mux.HandleFunc("GET /site/robots.txt", s.handleSiteRobots)
+	mux.HandleFunc("GET /site/{lang}/automacao-ia", s.handleSiteAutomacao)
+	mux.HandleFunc("GET /site/{lang}/tech-insights", s.handleSiteTech)
+	mux.HandleFunc("GET /site/{lang}/design-experiencias", s.handleSiteDesign)
 
 	// Radar (temas, fontes, itens, ideias — CRUD/listas)
 	mux.HandleFunc("GET /api/v1/radar/topics", s.handleRadarTopicsList)
@@ -1733,6 +1737,29 @@ func (s *Server) handleSiteSitemap(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
 	_, _ = w.Write([]byte(body))
+}
+
+func (s *Server) handleSiteRobots(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	_, _ = w.Write([]byte(s.site.RenderRobots()))
+}
+
+func (s *Server) handleSiteAutomacao(w http.ResponseWriter, r *http.Request) {
+	s.renderSitePage(w, r, func(ctx context.Context, lang string) (string, error) {
+		return s.site.RenderLanding(ctx, lang, "automacao")
+	}, false)
+}
+
+func (s *Server) handleSiteTech(w http.ResponseWriter, r *http.Request) {
+	s.renderSitePage(w, r, func(ctx context.Context, lang string) (string, error) {
+		return s.site.RenderLanding(ctx, lang, "tech")
+	}, false)
+}
+
+func (s *Server) handleSiteDesign(w http.ResponseWriter, r *http.Request) {
+	s.renderSitePage(w, r, func(ctx context.Context, lang string) (string, error) {
+		return s.site.RenderLanding(ctx, lang, "design")
+	}, false)
 }
 
 func (s *Server) handleSiteConteudos(w http.ResponseWriter, r *http.Request) {

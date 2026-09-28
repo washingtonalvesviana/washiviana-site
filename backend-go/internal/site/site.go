@@ -43,6 +43,16 @@ var ptDefaults = map[string]string{
 	"home.about_title":       "Um pouco sobre mim", "home.about_cta": "Conheça minha trajetória",
 	"footer.menu": "Menu", "footer.rights": "Todos os direitos reservados.", "footer.admin": "Área Administrativa",
 	"contents.page_title": "Conteúdos", "projects.page_title_all": "Todos os Projetos",
+	"landing.automation.title":     "Automação & IA",
+	"landing.automation.desc":      "Aplicações reais de IA e automação para produtividade, processos e experiências digitais.",
+	"landing.automation.soon_desc": "Novos conteúdos de Automação & IA serão publicados em breve.",
+	"landing.tech.title":           "Tech Insights",
+	"landing.tech.desc":            "Notícias comentadas, análises e tendências de tecnologia — com opinião e contexto.",
+	"landing.tech.soon_desc":       "Novos Tech Insights serão publicados em breve.",
+	"landing.design.title":         "Design & Experiências Digitais",
+	"landing.design.desc":          "VR, 3D, UI/UX e experiências interativas — projetos com foco em estética, usabilidade e impacto.",
+	"landing.design.empty_title":   "Nenhum projeto encontrado",
+	"landing.design.empty_desc":    "Em breve mais projetos de design e experiências digitais por aqui.",
 }
 
 func (s *Service) strings(ctx context.Context, lang string) (map[string]string, map[string]string) {
@@ -496,6 +506,84 @@ func (s *Service) RenderSobre(ctx context.Context, lang string) (string, error) 
 	b.WriteString("<h1 class=\"text-3xl font-black mb-6\">" + esc(p.t("nav.about")) + "</h1>\n")
 	b.WriteString("<div class=\"prose max-w-3xl text-neutral-800\">" + bio + "</div>\n")
 	return s.shell(lang, p, p.titulo+" — "+p.t("nav.about"), p.pick("home_frase_impacto"), "/site/"+lang+"/sobre", b.String()), nil
+}
+
+// RenderLanding renderiza as landings (automacao | tech | design).
+func (s *Service) RenderLanding(ctx context.Context, lang, kind string) (string, error) {
+	p, err := s.pageCtx(ctx, lang)
+	if err != nil {
+		return "", err
+	}
+	var b strings.Builder
+
+	switch kind {
+	case "design":
+		b.WriteString("<h1 class=\"text-3xl font-black mb-3\">" + esc(p.t("landing.design.title")) + "</h1>\n")
+		b.WriteString("<p class=\"text-neutral-600 mb-8\">" + esc(p.t("landing.design.desc")) + "</p>\n")
+		projects, err := s.store.SiteProjectsByTag(ctx, lang, "design")
+		if err != nil {
+			return "", err
+		}
+		if len(projects) == 0 {
+			b.WriteString("<p class=\"text-neutral-500\">" + esc(p.t("landing.design.empty_desc")) + "</p>")
+		} else {
+			b.WriteString("<ul class=\"grid sm:grid-cols-2 lg:grid-cols-3 gap-6\">\n")
+			for _, pr := range projects {
+				b.WriteString("<li class=\"rounded-xl border border-neutral-200 p-5\"><a class=\"font-semibold hover:underline\" href=\"/" + lang + "/projeto/" + esc(exib(pr, "slug_exib", "slug")) + "\">" + esc(exib(pr, "titulo_exib", "titulo")) + "</a>")
+				if d := exib(pr, "descricao_exib", "descricao"); d != "" {
+					b.WriteString("<p class=\"text-sm text-neutral-600 mt-2\">" + esc(truncate(d, 160)) + "</p>")
+				}
+				b.WriteString("</li>\n")
+			}
+			b.WriteString("</ul>\n")
+		}
+		return s.shell(lang, p, p.t("landing.design.title")+" — "+p.titulo, p.t("landing.design.desc"), "/site/"+lang+"/design-experiencias", b.String()), nil
+
+	case "tech", "automacao":
+		titleKey, descKey, soonKey := "landing.automation.title", "landing.automation.desc", "landing.automation.soon_desc"
+		slugs := []string{"automacao", "inteligencia-artificial"}
+		pagePath := "automacao-ia"
+		if kind == "tech" {
+			titleKey, descKey, soonKey = "landing.tech.title", "landing.tech.desc", "landing.tech.soon_desc"
+			slugs = []string{"tech-insights"}
+			pagePath = "tech-insights"
+		}
+		b.WriteString("<h1 class=\"text-3xl font-black mb-3\">" + esc(p.t(titleKey)) + "</h1>\n")
+		b.WriteString("<p class=\"text-neutral-600 mb-8\">" + esc(p.t(descKey)) + "</p>\n")
+		arts, err := s.store.SiteArticlesByCategorySlugs(ctx, lang, slugs)
+		if err != nil {
+			return "", err
+		}
+		if len(arts) == 0 {
+			b.WriteString("<p class=\"text-neutral-500\">" + esc(p.t(soonKey)) + "</p>")
+		} else {
+			b.WriteString("<ul class=\"grid sm:grid-cols-2 gap-6\">\n")
+			for _, a := range arts {
+				b.WriteString("<li><a class=\"block hover:underline\" href=\"/" + lang + "/artigo/" + esc(exib(a, "slug_exib", "slug")) + "\">")
+				b.WriteString("<span class=\"text-lg font-semibold\">" + esc(exib(a, "titulo_exib", "titulo")) + "</span>")
+				if r := exib(a, "resumo_exib", "resumo"); r != "" {
+					b.WriteString("<p class=\"text-sm text-neutral-600 mt-1\">" + esc(truncate(r, 180)) + "</p>")
+				}
+				b.WriteString("</a></li>\n")
+			}
+			b.WriteString("</ul>\n")
+		}
+		return s.shell(lang, p, p.t(titleKey)+" — "+p.titulo, p.t(descKey), "/site/"+lang+"/"+pagePath, b.String()), nil
+	}
+	return "", ErrNotFound
+}
+
+// RenderRobots gera o robots.txt.
+func (s *Service) RenderRobots() string {
+	base := strings.TrimRight(s.cfg.SiteBaseURL, "/")
+	return "User-agent: *\nAllow: /\n\nSitemap: " + base + "/sitemap.xml\n"
+}
+
+func exib(m map[string]any, key, fallback string) string {
+	if v := asStr(m[key]); v != "" {
+		return v
+	}
+	return asStr(m[fallback])
 }
 
 // RenderSitemap gera o sitemap.xml com URLs finais (/{lang}/...) e hreflang.

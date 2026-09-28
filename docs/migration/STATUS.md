@@ -40,8 +40,9 @@
 - [ ] (b) Demais endpoints → Go: linkedin/facebook/instagram, oauth callbacks (`linkedin-callback.php`, `oauth_callback.php`), categorias i18n e publicação (gated).
 - [~] (c) **Site público → Go (strangler — sem cutover)**: páginas renderizadas no Go (pt/en/es), com SEO (canonical/hreflang/OG) e CSS Tailwind do site:
   - `GET /site/{lang}/` (home), `/conteudos`, `/projetos`, `/sobre`, `/artigo/{slug}`, `/projeto/{slug}` (detalhe usa `*_i18n` por idioma; 404 quando inexistente).
-  - `GET /site/sitemap.xml` — sitemap com URLs finais `/{lang}/...` e hreflang (pt-BR/en/es).
-  - `site_test.py` **28/28 PASS**.
+  - `GET /site/{lang}/automacao-ia`, `/tech-insights`, `/design-experiencias` (landings; filtros por categoria/tag, com i18n).
+  - `GET /site/sitemap.xml` (URLs finais + hreflang) e `GET /site/robots.txt`.
+  - `site_test.py` **32/32 PASS**.
   - **Não** roteado no nginx público (site PHP continua no ar). Próximo: refino visual e cutover **após sua validação de design/SEO**.
 - [ ] (d) Aposentar admin/site PHP após paridade.
 - [x] (e, parcial) **`generate_images_multi`** → Go: `POST /api/v1/ai/images-multi` gera a imagem base e cria recortes **1:1** e **9:16** (`ai_1x1_*.jpg`/`ai_9x16_*.jpg`), removendo a base. `images_multi_test.py` **6/6 PASS**.
