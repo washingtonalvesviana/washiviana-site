@@ -110,6 +110,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/v1/ai/image", s.writeGuard(s.handleAIImage))
 	mux.HandleFunc("POST /api/v1/ai/social-agent", s.writeGuard(s.handleAISocialAgent))
 	mux.HandleFunc("GET /api/v1/ai/gemini-models", s.handleGeminiModels)
+	mux.HandleFunc("POST /api/v1/ai/images-multi", s.writeGuard(s.handleAIImagesMulti))
 
 	// Redes sociais (config)
 	mux.HandleFunc("GET /api/v1/redes-sociais", s.handleRedesList)
@@ -2223,6 +2224,28 @@ func sameOrigin(r *http.Request, baseURL string) bool {
 		return false
 	}
 	return strings.EqualFold(u.Hostname(), host)
+}
+
+func (s *Server) handleAIImagesMulti(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Prompt string `json:"prompt"`
+	}
+	if !s.decodeJSON(w, r, &body) {
+		return
+	}
+	if strings.TrimSpace(body.Prompt) == "" {
+		writeJSON(w, http.StatusOK, map[string]any{"success": false, "message": "Prompt não fornecido"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 280*time.Second)
+	defer cancel()
+
+	res, err := s.ai.GenerateImagesMulti(ctx, body.Prompt, s.cfg.UploadDir, s.cfg.UploadURL)
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"success": false, "message": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, res)
 }
 
 // --- SEO/traduções ---

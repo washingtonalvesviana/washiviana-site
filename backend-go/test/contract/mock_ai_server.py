@@ -2,15 +2,28 @@
 """Mock de provedor OpenAI-compatível para testes de IA/i18n (sem chamadas externas)."""
 import base64
 import json
+import struct
+import zlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HOST = "127.0.0.1"
 PORT = 8091
 
-PNG_B64 = base64.b64encode(bytes.fromhex(
-    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
-    "0000000a49444154789c6300010000050001a5f645400000000049454e44ae426082"
-)).decode()
+
+def _png(w, h, rgb):
+    def chunk(tag, data):
+        c = tag + data
+        return struct.pack(">I", len(data)) + c + struct.pack(">I", zlib.crc32(c) & 0xFFFFFFFF)
+
+    raw = b"".join(b"\x00" + bytes(rgb) * w for _ in range(h))
+    return (b"\x89PNG\r\n\x1a\n"
+            + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw))
+            + chunk(b"IEND", b""))
+
+
+# PNG 64x64 RGB (para recortes 1:1 e 9:16 terem dimensões válidas)
+PNG_B64 = base64.b64encode(_png(64, 64, (200, 100, 50))).decode()
 
 
 def i18n_payload():

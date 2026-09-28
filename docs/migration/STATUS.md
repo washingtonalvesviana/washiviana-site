@@ -37,7 +37,8 @@
 - [ ] (b) Demais endpoints → Go: linkedin/facebook/instagram, oauth callbacks (`linkedin-callback.php`, `oauth_callback.php`), categorias i18n e publicação (gated).
 - [ ] (c) Site público → Go/Next.js (strangler) — **próximo grande bloco**.
 - [ ] (d) Aposentar admin/site PHP após paridade.
-- [ ] (e) Otimização de imagem (GD) + `generate_images_multi` (1:1/9:16).
+- [x] (e, parcial) **`generate_images_multi`** → Go: `POST /api/v1/ai/images-multi` gera a imagem base e cria recortes **1:1** e **9:16** (`ai_1x1_*.jpg`/`ai_9x16_*.jpg`), removendo a base. `images_multi_test.py` **6/6 PASS**.
+  - Divergência consciente: sem o **otimizador GD** (não faz resize/recompressão a 1200x1200 / 1080x1920) — apenas recorte central + JPEG q90.
 - [ ] (f) CI rodando as suítes.
 
 > Workers ainda em PHP: `washiviana-articles-publish` (publicação agendada — depende de tokens) e `washiviana-video-worker`.
