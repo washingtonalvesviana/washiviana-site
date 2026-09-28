@@ -67,6 +67,19 @@ func (s *Store) UpsertRadarItem(ctx context.Context, sourceID *int, url, urlNorm
 	return itemID, nil
 }
 
+// RadarItemsFullByIDs devolve linhas completas por ids (para backup).
+func (s *Store) RadarItemsFullByIDs(ctx context.Context, ids []int) ([]map[string]any, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return s.queryMaps(ctx, "SELECT * FROM radar_items WHERE id = ANY($1)", ids)
+}
+
+// RadarItemsFullByURL devolve linhas completas por filtro de URL (para backup).
+func (s *Store) RadarItemsFullByURL(ctx context.Context, urlLike string) ([]map[string]any, error) {
+	return s.queryMaps(ctx, "SELECT * FROM radar_items WHERE url LIKE $1", "%"+urlLike+"%")
+}
+
 // InsertRadarRun cria um run.
 func (s *Store) InsertRadarRun(ctx context.Context, metaJSON string) (int, error) {
 	var id int

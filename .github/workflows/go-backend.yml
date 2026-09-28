@@ -1,0 +1,62 @@
+name: go-backend
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: go vet
+        working-directory: backend-go
+        run: go vet ./...
+
+      - name: go build
+        working-directory: backend-go
+        run: go build ./...
+
+      - name: go test (compile)
+        working-directory: backend-go
+        run: go test ./...
+
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Valida JS do admin-next
+        run: node --check admin-next/app.js
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compila scripts de teste (sintaxe)
+        run: |
+          python3 -m compileall -q backend-go/test/contract
+
+      - name: Valida YAML do OpenAPI
+        run: |
+          python3 - <<'PY'
+          import sys
+          try:
+              import yaml
+          except ImportError:
+              print("PyYAML ausente; pulando validação do openapi.yaml")
+              sys.exit(0)
+          yaml.safe_load(open("docs/migration/openapi.yaml"))
+          print("openapi.yaml OK")
+          PY

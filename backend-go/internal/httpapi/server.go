@@ -1881,29 +1881,49 @@ func (s *Server) handleRadarItemsDelete(w http.ResponseWriter, r *http.Request) 
 		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "Limite de exclusão por requisição: 1000"})
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
 
-	var deleted int
+	if len(body.IDs) == 0 && len(urlLike) < 3 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "Filtro muito curto, informe ao menos 3 caracteres"})
+		return
+	}
+
+	// Backup CSV antes de apagar (como o PHP).
+	var rows []map[string]any
 	var err error
+	if len(body.IDs) > 0 {
+		rows, err = s.store.RadarItemsFullByIDs(ctx, body.IDs)
+	} else {
+		rows, err = s.store.RadarItemsFullByURL(ctx, urlLike)
+	}
+	if err != nil {
+		s.fail(w, "radar items backup", err, "Erro ao remover itens.")
+		return
+	}
+	if len(rows) == 0 {
+		writeJSON(w, http.StatusNotFound, map[string]any{"success": false, "message": "Nenhum item encontrado"})
+		return
+	}
+	backupFile, csvErr := writeRadarBackupCSV(rows)
+	if csvErr != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"success": false, "message": "Erro ao criar backup"})
+		return
+	}
+
+	var deleted int
 	if len(body.IDs) > 0 {
 		deleted, err = s.store.RadarItemsDeleteByIDs(ctx, body.IDs)
 	} else {
-		if len(urlLike) < 3 {
-			writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "Filtro muito curto, informe ao menos 3 caracteres"})
-			return
-		}
 		deleted, err = s.store.RadarItemsDeleteByURL(ctx, urlLike)
 	}
 	if err != nil {
 		s.fail(w, "radar items delete", err, "Erro ao remover itens.")
 		return
 	}
-	if deleted == 0 {
-		writeJSON(w, http.StatusNotFound, map[string]any{"success": false, "message": "Nenhum item encontrado"})
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "Itens removidos", "deleted_count": deleted})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success": true, "message": "Itens removidos", "deleted_count": deleted, "backup_file": backupFile,
+	})
 }
 
 func (s *Server) handleRadarIdeasList(w http.ResponseWriter, r *http.Request) {

@@ -74,6 +74,7 @@ def expect(name, cond, extra=""):
 
 
 def cleanup():
+    psql("DELETE FROM radar_items WHERE url LIKE '%zz-radar-del%';")
     psql(f"DELETE FROM radar_topic_sources WHERE topic_id IN (SELECT id FROM radar_topics WHERE nome LIKE '{MARK}%');")
     psql(f"DELETE FROM radar_topics WHERE nome LIKE '{MARK}%';")
     psql(f"DELETE FROM radar_sources WHERE nome LIKE '{MARK}%';")
@@ -132,6 +133,17 @@ def main():
         ok &= expect("radar items delete sem parâmetros -> 400", st == 400, body)
         st, body = api("POST", "/api/v1/radar/items/delete", {"url_like": "zz-nao-existe-xyz"}, csrf)
         ok &= expect("radar items delete sem itens -> 404", st == 404, body)
+
+        # delete com backup CSV
+        psql("INSERT INTO radar_items (url, url_norm, titulo, score) VALUES "
+             "('https://zz-radar-del.test/1','https://zz-radar-del.test/1','ZZ Rad Item 1',10),"
+             "('https://zz-radar-del.test/2','https://zz-radar-del.test/2','ZZ Rad Item 2',10);")
+        st, body = api("POST", "/api/v1/radar/items/delete", {"url_like": "zz-radar-del"}, csrf)
+        bf = body.get("backup_file")
+        ok &= expect("radar items delete com backup", st == 200 and body.get("deleted_count", 0) >= 2 and bf, body)
+        ok &= expect("backup CSV existe", bool(bf) and os.path.isfile(bf))
+        if bf and os.path.isfile(bf):
+            os.remove(bf)
 
         # remover fonte e tema
         st, body = api("DELETE", f"/api/v1/radar/sources/{source_id}", csrf=csrf)
