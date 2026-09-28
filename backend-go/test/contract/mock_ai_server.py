@@ -58,7 +58,14 @@ class Handler(BaseHTTPRequestHandler):
         lang_match = _re.search(r"para (pt|en|es)", prompt)
         lang = lang_match.group(1) if lang_match else "en"
 
-        if "UI (PT-BR):" in prompt:
+        if "sugerir ideias de artigos" in prompt:
+            reply = json.dumps({"ideas": [
+                {"title": "Mock Idea 1", "angle": "angulo", "summary": "resumo",
+                 "outline": ["p1", "p2"], "tags": ["t1", "t2"], "priority": "hype"},
+                {"title": "Mock Idea 2", "angle": "angulo2", "summary": "resumo2",
+                 "outline": ["p3"], "tags": ["t3"], "priority": "medium"},
+            ]})
+        elif "UI (PT-BR):" in prompt:
             reply = json.dumps({"ui": {lang: {"nav.home": "Home", "nav.contents": "Contents"}}})
         elif "CONFIG (PT-BR):" in prompt:
             reply = json.dumps({"config": {lang: {"site_subtitulo": "Subtitle " + lang}}})

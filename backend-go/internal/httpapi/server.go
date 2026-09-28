@@ -23,6 +23,7 @@ import (
 	"washiviana/backend/internal/config"
 	"washiviana/backend/internal/i18n"
 	"washiviana/backend/internal/i18nsite"
+	"washiviana/backend/internal/radar"
 	"washiviana/backend/internal/store"
 	"washiviana/backend/internal/textutil"
 
@@ -43,13 +44,18 @@ type Server struct {
 	ai      *ai.Service
 	i18n    *i18n.Service
 	i18nSvc *i18nsite.Service
+	radar   *radar.Service
 	log     *slog.Logger
 }
 
 // New cria o servidor.
 func New(cfg config.Config, st *store.Store, authSvc *auth.Service, log *slog.Logger) *Server {
 	aiSvc := ai.New(st)
-	return &Server{cfg: cfg, store: st, auth: authSvc, ai: aiSvc, i18n: i18n.New(st, aiSvc), i18nSvc: i18nsite.New(st, aiSvc), log: log}
+	return &Server{
+		cfg: cfg, store: st, auth: authSvc, ai: aiSvc,
+		i18n: i18n.New(st, aiSvc), i18nSvc: i18nsite.New(st, aiSvc),
+		radar: radar.New(st, aiSvc), log: log,
+	}
 }
 
 // Routes registra as rotas.
@@ -130,6 +136,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/v1/radar/ideas", s.handleRadarIdeasList)
 	mux.HandleFunc("POST /api/v1/radar/ideas/{id}/discard", s.writeGuard(s.handleRadarIdeaDiscard))
 	mux.HandleFunc("GET /api/v1/radar/ideas/{id}/sources", s.handleRadarIdeaSources)
+	mux.HandleFunc("POST /api/v1/radar/ideas/generate", s.writeGuard(s.handleRadarIdeasGenerate))
+	mux.HandleFunc("POST /api/v1/radar/hype", s.writeGuard(s.handleRadarHype))
 
 	// SEO/Traduções (escrita)
 	mux.HandleFunc("POST /api/v1/i18n/generate", s.writeGuard(s.handleI18nGenerate))
@@ -1938,6 +1946,52 @@ func (s *Server) handleRadarIdeaSources(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"success": true, "sources": sources})
+}
+
+func (s *Server) handleRadarIdeasGenerate(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		TopicID    int `json:"topic_id"`
+		LimitItems int `json:"limit_items"`
+		NumIdeas   int `json:"num_ideas"`
+	}
+	if !s.decodeJSON(w, r, &body) {
+		return
+	}
+	if body.TopicID <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "topic_id inválido"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 220*time.Second)
+	defer cancel()
+
+	saved, ids, model, err := s.radar.GenerateIdeas(ctx, body.TopicID, body.LimitItems, body.NumIdeas)
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"success": false, "message": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success": true,
+		"message": "Ideias geradas",
+		"result":  map[string]any{"success": true, "saved": saved, "idea_ids": ids, "model": model},
+	})
+}
+
+func (s *Server) handleRadarHype(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Hours     int     `json:"hours"`
+		Threshold float64 `json:"threshold"`
+	}
+	_ = json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&body)
+
+	ctx, cancel := context.WithTimeout(r.Context(), 120*time.Second)
+	defer cancel()
+
+	clusters, updated, err := s.radar.AnalyzeHype(ctx, body.Hours, body.Threshold)
+	if err != nil {
+		s.fail(w, "radar hype", err, "Erro ao analisar hype.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "clusters_found": clusters, "items_updated": updated})
 }
 
 // --- vídeos ---
