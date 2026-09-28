@@ -135,6 +135,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /site/{lang}/sobre", s.handleSiteSobre)
 	mux.HandleFunc("GET /site/{lang}/artigo/{slug}", s.handleSiteArtigo)
 	mux.HandleFunc("GET /site/{lang}/projeto/{slug}", s.handleSiteProjeto)
+	mux.HandleFunc("GET /site/sitemap.xml", s.handleSiteSitemap)
 
 	// Radar (temas, fontes, itens, ideias — CRUD/listas)
 	mux.HandleFunc("GET /api/v1/radar/topics", s.handleRadarTopicsList)
@@ -1719,6 +1720,19 @@ func (s *Server) renderSitePage(w http.ResponseWriter, r *http.Request, render f
 		return
 	}
 	s.writeHTML(w, http.StatusOK, body)
+}
+
+func (s *Server) handleSiteSitemap(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+	body, err := s.site.RenderSitemap(ctx)
+	if err != nil {
+		s.log.Error("render sitemap", "error", err)
+		http.Error(w, "Erro ao gerar sitemap.", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+	_, _ = w.Write([]byte(body))
 }
 
 func (s *Server) handleSiteConteudos(w http.ResponseWriter, r *http.Request) {

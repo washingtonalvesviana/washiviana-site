@@ -86,6 +86,13 @@ def main():
     st, body, _ = fetch("/site/pt/artigo/zz-nao-existe-xyz")
     ok &= expect("artigo inexistente -> 404", st == 404)
 
+    # sitemap
+    st, body, headers = fetch("/site/sitemap.xml")
+    ok &= expect("sitemap 200 xml", st == 200 and "xml" in headers.get("Content-Type", ""))
+    ok &= expect("sitemap urlset + hreflang", "<urlset" in body and 'hreflang="pt-BR"' in body)
+    ok &= expect("sitemap páginas estáticas", "/pt/conteudos" in body and "/en/projetos" in body and "/es/sobre" in body)
+    ok &= expect("sitemap URLs de artigo", "/pt/artigo/" in body)
+
     print()
     print("RESULTADO:", "TUDO OK" if ok else "FALHAS ENCONTRADAS")
     return 0 if ok else 1

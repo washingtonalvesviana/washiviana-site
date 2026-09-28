@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html"
 	"strings"
+	"time"
 
 	"washiviana/backend/internal/config"
 	"washiviana/backend/internal/store"
@@ -495,6 +496,159 @@ func (s *Service) RenderSobre(ctx context.Context, lang string) (string, error) 
 	b.WriteString("<h1 class=\"text-3xl font-black mb-6\">" + esc(p.t("nav.about")) + "</h1>\n")
 	b.WriteString("<div class=\"prose max-w-3xl text-neutral-800\">" + bio + "</div>\n")
 	return s.shell(lang, p, p.titulo+" — "+p.t("nav.about"), p.pick("home_frase_impacto"), "/site/"+lang+"/sobre", b.String()), nil
+}
+
+// RenderSitemap gera o sitemap.xml com URLs finais (/{lang}/...) e hreflang.
+func (s *Service) RenderSitemap(ctx context.Context) (string, error) {
+	base := strings.TrimRight(s.cfg.SiteBaseURL, "/")
+	langs := []string{"pt", "en", "es"}
+	hl := func(l string) string {
+		if l == "pt" {
+			return "pt-BR"
+		}
+		return l
+	}
+	static := []struct{ path, prio, freq string }{
+		{"/", "1.0", "weekly"},
+		{"/conteudos", "0.8", "daily"},
+		{"/projetos", "0.8", "weekly"},
+		{"/automacao-ia", "0.7", "weekly"},
+		{"/tech-insights", "0.7", "weekly"},
+		{"/design-experiencias", "0.7", "weekly"},
+		{"/sobre", "0.6", "monthly"},
+	}
+
+	var b strings.Builder
+	b.WriteString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+	b.WriteString("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" xmlns:xhtml=\"http://www.w3.org/1999/xhtml\">\n")
+
+	for _, it := range static {
+		for _, lang := range langs {
+			b.WriteString("  <url>\n    <loc>" + esc(base+langPath(it.path, lang)) + "</loc>\n")
+			for _, alt := range langs {
+				b.WriteString("    <xhtml:link rel=\"alternate\" hreflang=\"" + hl(alt) + "\" href=\"" + esc(base+langPath(it.path, alt)) + "\" />\n")
+			}
+			b.WriteString("    <changefreq>" + it.freq + "</changefreq>\n    <priority>" + it.prio + "</priority>\n  </url>\n")
+		}
+	}
+
+	articles, _ := s.store.SitemapArticles(ctx)
+	aSlugs := s.slugMap(ctx, true)
+	for _, a := range articles {
+		id := asIntAnyLocal(a["id"])
+		slugs := aSlugs[id]
+		if slugs == nil {
+			slugs = map[string]string{}
+		}
+		slugs["pt"] = asStr(a["slug"])
+		lastmod := isoDate(asStr(a["updated_at"]), asStr(a["created_at"]))
+		for _, lang := range langs {
+			if lang != "pt" && slugs[lang] == "" {
+				continue
+			}
+			b.WriteString("  <url>\n    <loc>" + esc(base+artPath(slugOr(slugs, lang), lang)) + "</loc>\n")
+			for _, alt := range langs {
+				if alt != "pt" && slugs[alt] == "" {
+					continue
+				}
+				b.WriteString("    <xhtml:link rel=\"alternate\" hreflang=\"" + hl(alt) + "\" href=\"" + esc(base+artPath(slugOr(slugs, alt), alt)) + "\" />\n")
+			}
+			if lastmod != "" {
+				b.WriteString("    <lastmod>" + lastmod + "</lastmod>\n")
+			}
+			b.WriteString("    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n")
+		}
+	}
+
+	projects, _ := s.store.SitemapProjects(ctx)
+	pSlugs := s.slugMap(ctx, false)
+	for _, pr := range projects {
+		id := asIntAnyLocal(pr["id"])
+		slugs := pSlugs[id]
+		if slugs == nil {
+			slugs = map[string]string{}
+		}
+		slugs["pt"] = asStr(pr["slug"])
+		lastmod := isoDate(asStr(pr["updated_at"]), asStr(pr["created_at"]))
+		for _, lang := range langs {
+			if lang != "pt" && slugs[lang] == "" {
+				continue
+			}
+			b.WriteString("  <url>\n    <loc>" + esc(base+projPath(slugOr(slugs, lang), lang)) + "</loc>\n")
+			for _, alt := range langs {
+				if alt != "pt" && slugs[alt] == "" {
+					continue
+				}
+				b.WriteString("    <xhtml:link rel=\"alternate\" hreflang=\"" + hl(alt) + "\" href=\"" + esc(base+projPath(slugOr(slugs, alt), alt)) + "\" />\n")
+			}
+			if lastmod != "" {
+				b.WriteString("    <lastmod>" + lastmod + "</lastmod>\n")
+			}
+			b.WriteString("    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>\n")
+		}
+	}
+	b.WriteString("</urlset>\n")
+	return b.String(), nil
+}
+
+func (s *Service) slugMap(ctx context.Context, artigo bool) map[int]map[string]string {
+	out := map[int]map[string]string{}
+	var rows []map[string]any
+	var err error
+	var idKey string
+	if artigo {
+		rows, err = s.store.SitemapArticleSlugs(ctx)
+		idKey = "artigo_id"
+	} else {
+		rows, err = s.store.SitemapProjectSlugs(ctx)
+		idKey = "projeto_id"
+	}
+	if err != nil {
+		return out
+	}
+	for _, r := range rows {
+		id := asIntAnyLocal(r[idKey])
+		lang := asStr(r["lang"])
+		slug := asStr(r["slug"])
+		if id <= 0 || lang == "" || slug == "" {
+			continue
+		}
+		if out[id] == nil {
+			out[id] = map[string]string{}
+		}
+		out[id][lang] = slug
+	}
+	return out
+}
+
+func slugOr(m map[string]string, lang string) string {
+	if v := m[lang]; v != "" {
+		return v
+	}
+	return m["pt"]
+}
+
+func langPath(path, lang string) string {
+	if path == "/" {
+		return "/" + lang + "/"
+	}
+	return "/" + lang + path
+}
+
+func artPath(slug, lang string) string  { return "/" + lang + "/artigo/" + slug }
+func projPath(slug, lang string) string { return "/" + lang + "/projeto/" + slug }
+
+func isoDate(updated, created string) string {
+	v := updated
+	if v == "" {
+		v = created
+	}
+	for _, layout := range []string{"2006-01-02 15:04:05.999999", "2006-01-02 15:04:05", "2006-01-02"} {
+		if t, err := time.ParseInLocation(layout, v, time.Local); err == nil {
+			return t.UTC().Format("2006-01-02T15:04:05Z")
+		}
+	}
+	return ""
 }
 
 func asIntAnyLocal(v any) int {
