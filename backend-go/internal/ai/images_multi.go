@@ -37,19 +37,21 @@ func (s *Service) GenerateImagesMulti(ctx context.Context, prompt, uploadDir, up
 	out := map[string]any{"success": true}
 
 	specs := []struct {
-		rw, rh, prefix, key, urlKey string
+		rw, rh, maxW, maxH  int
+		prefix, key, urlKey string
 	}{
-		{"1", "1", "ai_1x1_", "imagem_1x1", "imagem_1x1_url"},
-		{"9", "16", "ai_9x16_", "imagem_9x16", "imagem_9x16_url"},
+		{1, 1, 1200, 1200, "ai_1x1_", "imagem_1x1", "imagem_1x1_url"},
+		{9, 16, 1080, 1920, "ai_9x16_", "imagem_9x16", "imagem_9x16_url"},
 	}
 	for _, sp := range specs {
-		rw := atoiSimple(sp.rw)
-		rh := atoiSimple(sp.rh)
-		cropped := cropToRatio(src, rw, rh)
+		cropped := cropToRatio(src, sp.rw, sp.rh)
 		name := sp.prefix + baseID + ".jpg"
-		if err := writeJPEG(filepath.Join(uploadDir, name), cropped, 90); err != nil {
+		dst := filepath.Join(uploadDir, name)
+		if err := writeJPEG(dst, cropped, 90); err != nil {
 			continue
 		}
+		// Otimização (resize + recompressão), como o PHP.
+		_ = optimizeJPEGInPlace(dst, sp.maxW, sp.maxH, 500, 85)
 		out[sp.key] = name
 		out[sp.urlKey] = trimSlash(uploadURL) + "/" + name
 	}
