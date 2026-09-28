@@ -26,6 +26,7 @@ STAGING_DB = os.environ.get("GO_DB_NAME", "washiviana_staging")
 KEYS = ["llm_text_provider", "llm_text_model", "openai_api_key", "openai_base_url"]
 AFFECTED_UI = [("nav.home", "en"), ("nav.home", "es"), ("nav.contents", "en"), ("nav.contents", "es")]
 AFFECTED_CFG = [("site_subtitulo", "en"), ("site_subtitulo", "es")]
+AFFECTED_CAT = [(1, "en"), (1, "es")]
 
 jar = http.cookiejar.CookieJar()
 opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
@@ -67,6 +68,19 @@ def snap_ui(chave, lang):
 def snap_cfg(chave, lang):
     exists = psql(f"SELECT count(*) FROM configuracoes_i18n WHERE chave={sqlq(chave)} AND lang={sqlq(lang)};") != "0"
     return {"exists": exists, "value": psql(f"SELECT valor FROM configuracoes_i18n WHERE chave={sqlq(chave)} AND lang={sqlq(lang)};")}
+
+
+def snap_cat(tid, lang):
+    exists = psql(f"SELECT count(*) FROM categorias_i18n WHERE categoria_id={tid} AND lang={sqlq(lang)};") != "0"
+    return {"exists": exists, "nome": psql(f"SELECT nome FROM categorias_i18n WHERE categoria_id={tid} AND lang={sqlq(lang)};"),
+            "slug": psql(f"SELECT slug FROM categorias_i18n WHERE categoria_id={tid} AND lang={sqlq(lang)};")}
+
+
+def snap_catart(tid, lang):
+    exists = psql(f"SELECT count(*) FROM categorias_artigos_i18n WHERE categoria_id={tid} AND lang={sqlq(lang)};") != "0"
+    return {"exists": exists, "nome": psql(f"SELECT nome FROM categorias_artigos_i18n WHERE categoria_id={tid} AND lang={sqlq(lang)};"),
+            "slug": psql(f"SELECT slug FROM categorias_artigos_i18n WHERE categoria_id={tid} AND lang={sqlq(lang)};"),
+            "descricao": psql(f"SELECT descricao FROM categorias_artigos_i18n WHERE categoria_id={tid} AND lang={sqlq(lang)};")}
 
 
 def set_conf(key, value):
@@ -113,6 +127,8 @@ def main():
                      "value": psql(f"SELECT valor FROM configuracoes WHERE chave={sqlq(k)};")} for k in KEYS}
     ui_snaps = {(c, l): snap_ui(c, l) for c, l in AFFECTED_UI}
     cfg2_snaps = {(c, l): snap_cfg(c, l) for c, l in AFFECTED_CFG}
+    cat_snaps = {(i, l): snap_cat(i, l) for i, l in AFFECTED_CAT}
+    catart_snaps = {(i, l): snap_catart(i, l) for i, l in AFFECTED_CAT}
 
     mock = subprocess.Popen([sys.executable, os.path.join(HERE, "mock_ai_server.py")],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -139,6 +155,12 @@ def main():
         ok &= expect("ui_strings nav.home(en) gravado", v == "Home", v)
         c = psql("SELECT valor FROM configuracoes_i18n WHERE chave='site_subtitulo' AND lang='en';")
         ok &= expect("configuracoes_i18n site_subtitulo(en) gravado", c == "Subtitle en", c)
+
+        ok &= expect("saved_categories contém en", "en" in body.get("saved_categories", {}), body.get("saved_categories"))
+        cp = psql("SELECT nome FROM categorias_i18n WHERE categoria_id=1 AND lang='en';")
+        ok &= expect("categorias_i18n nome(en) gravado", cp == "Proj Cat en", cp)
+        ca = psql("SELECT nome FROM categorias_artigos_i18n WHERE categoria_id=1 AND lang='es';")
+        ok &= expect("categorias_artigos_i18n nome(es) gravado", ca == "Art Cat es", ca)
     finally:
         # restaurar UI
         for (chave, lang), snap in ui_snaps.items():
@@ -153,6 +175,18 @@ def main():
                      ") ON CONFLICT (chave, lang) DO UPDATE SET valor = EXCLUDED.valor;")
             else:
                 psql(f"DELETE FROM configuracoes_i18n WHERE chave={sqlq(chave)} AND lang={sqlq(lang)};")
+        for (tid, lang), snap in cat_snaps.items():
+            if snap["exists"]:
+                psql("INSERT INTO categorias_i18n (categoria_id, lang, nome, slug) VALUES (" + str(tid) + "," + sqlq(lang) + "," + sqlq(snap["nome"]) + "," + sqlq(snap["slug"]) +
+                     ") ON CONFLICT (categoria_id, lang) DO UPDATE SET nome=EXCLUDED.nome, slug=EXCLUDED.slug;")
+            else:
+                psql(f"DELETE FROM categorias_i18n WHERE categoria_id={tid} AND lang={sqlq(lang)};")
+        for (tid, lang), snap in catart_snaps.items():
+            if snap["exists"]:
+                psql("INSERT INTO categorias_artigos_i18n (categoria_id, lang, nome, slug, descricao) VALUES (" + str(tid) + "," + sqlq(lang) + "," + sqlq(snap["nome"]) + "," + sqlq(snap["slug"]) + "," + sqlq(snap["descricao"]) +
+                     ") ON CONFLICT (categoria_id, lang) DO UPDATE SET nome=EXCLUDED.nome, slug=EXCLUDED.slug, descricao=EXCLUDED.descricao;")
+            else:
+                psql(f"DELETE FROM categorias_artigos_i18n WHERE categoria_id={tid} AND lang={sqlq(lang)};")
         for k, snap in cfg_snaps.items():
             if snap["exists"]:
                 set_conf(k, snap["value"])

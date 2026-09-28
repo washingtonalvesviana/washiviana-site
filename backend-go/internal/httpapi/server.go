@@ -2385,7 +2385,7 @@ func (s *Server) handleI18nSite(w http.ResponseWriter, r *http.Request) {
 		"message":          "Traduções do site geradas.",
 		"saved_ui":         res.SavedUI,
 		"saved_config":     res.SavedConfig,
-		"saved_categories": map[string]any{},
+		"saved_categories": res.SavedCategories,
 	})
 }
 

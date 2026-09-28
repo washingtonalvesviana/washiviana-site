@@ -133,8 +133,9 @@ var configKeys = []string{
 
 // Result agrega o que foi salvo.
 type Result struct {
-	SavedUI     map[string][]string `json:"saved_ui"`
-	SavedConfig map[string][]string `json:"saved_config"`
+	SavedUI         map[string][]string         `json:"saved_ui"`
+	SavedConfig     map[string][]string         `json:"saved_config"`
+	SavedCategories map[string]map[string][]int `json:"saved_categories"`
 }
 
 // Generate traduz UI/config para os idiomas pedidos.
@@ -144,8 +145,20 @@ func (s *Service) Generate(ctx context.Context, langs []string) (*Result, error)
 		return nil, err
 	}
 
-	res := &Result{SavedUI: map[string][]string{}, SavedConfig: map[string][]string{}}
+	res := &Result{
+		SavedUI:         map[string][]string{},
+		SavedConfig:     map[string][]string{},
+		SavedCategories: map[string]map[string][]int{},
+	}
 	cfgJSON, _ := json.Marshal(cfgVals)
+
+	catProj, _ := s.store.CategoriasAtivasProjetos(ctx)
+	catArt, _ := s.store.CategoriasAtivasArtigos(ctx)
+	catPayload := map[string]any{
+		"categorias_projetos": catProj,
+		"categorias_artigos":  catArt,
+	}
+	catJSON, _ := json.Marshal(catPayload)
 
 	for _, lang := range langs {
 		// UI em chunks de 24
@@ -210,8 +223,94 @@ func (s *Service) Generate(ctx context.Context, langs []string) (*Result, error)
 				res.SavedConfig[lang] = append(res.SavedConfig[lang], k)
 			}
 		}
+
+		// 3) Categorias (nome/descricao) por idioma.
+		if len(catProj) > 0 || len(catArt) > 0 {
+			promptCats := "Você é especialista em localização (i18n).\n" +
+				"Responda APENAS com JSON válido (sem markdown, sem texto extra).\n" +
+				"Não inclua pensamentos/raciocínio.\n\n" +
+				"Traduza do PT-BR para " + lang + " mantendo o mesmo sentido.\n" +
+				"- NÃO traduza nem altere o campo slug.\n" +
+				"- Retorne neste formato:\n" +
+				"{ \"categorias_projetos\": {\"id\": {\"nome\":\"...\"}}, \"categorias_artigos\": {\"id\": {\"nome\":\"...\",\"descricao\":\"...\"}} }\n\n" +
+				"DADOS (PT-BR):\n" + string(catJSON)
+			outCats, err := s.ai.GenerateJSON(ctx, promptCats, 4096)
+			if err != nil {
+				return res, err
+			}
+			savedProj := []int{}
+			projOut := childMap(outCats["categorias_projetos"])
+			for _, c := range catProj {
+				id := asIntAny(c["id"])
+				entry := childMap(projOut[strID(id)])
+				nome := strings.TrimSpace(asStrAny(entry["nome"]))
+				if id <= 0 || nome == "" {
+					continue
+				}
+				if err := s.store.UpsertCategoriaI18n(ctx, id, lang, nome, asStrAny(c["slug"])); err != nil {
+					return res, err
+				}
+				savedProj = append(savedProj, id)
+			}
+			savedArt := []int{}
+			artOut := childMap(outCats["categorias_artigos"])
+			for _, c := range catArt {
+				id := asIntAny(c["id"])
+				entry := childMap(artOut[strID(id)])
+				nome := strings.TrimSpace(asStrAny(entry["nome"]))
+				if id <= 0 || nome == "" {
+					continue
+				}
+				var desc *string
+				if d := strings.TrimSpace(asStrAny(entry["descricao"])); d != "" {
+					desc = &d
+				}
+				if err := s.store.UpsertCategoriaArtigoI18n(ctx, id, lang, nome, asStrAny(c["slug"]), desc); err != nil {
+					return res, err
+				}
+				savedArt = append(savedArt, id)
+			}
+			if len(savedProj) > 0 || len(savedArt) > 0 {
+				res.SavedCategories[lang] = map[string][]int{
+					"categorias_projetos": savedProj,
+					"categorias_artigos":  savedArt,
+				}
+			}
+		}
 	}
 	return res, nil
+}
+
+func childMap(v any) map[string]any {
+	if m, ok := v.(map[string]any); ok {
+		return m
+	}
+	return map[string]any{}
+}
+
+func asStrAny(v any) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
+}
+
+func asIntAny(v any) int {
+	switch n := v.(type) {
+	case int:
+		return n
+	case int32:
+		return int(n)
+	case int64:
+		return int(n)
+	case float64:
+		return int(n)
+	}
+	return 0
+}
+
+func strID(i int) string {
+	return fmt.Sprintf("%d", i)
 }
 
 // langMap aceita {"en":{...}} ou {key:value}; devolve key->texto.

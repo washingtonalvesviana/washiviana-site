@@ -489,6 +489,8 @@ func asInt(v any) int {
 	switch n := v.(type) {
 	case int:
 		return n
+	case int32:
+		return int(n)
 	case int64:
 		return int(n)
 	case float64:

@@ -88,6 +88,11 @@ class Handler(BaseHTTPRequestHandler):
             reply = json.dumps({"ui": {lang: {"nav.home": "Home", "nav.contents": "Contents"}}})
         elif "CONFIG (PT-BR):" in prompt:
             reply = json.dumps({"config": {lang: {"site_subtitulo": "Subtitle " + lang}}})
+        elif "categorias_projetos" in prompt:
+            reply = json.dumps({
+                "categorias_projetos": {"1": {"nome": "Proj Cat " + lang}},
+                "categorias_artigos": {"1": {"nome": "Art Cat " + lang, "descricao": "desc " + lang}},
+            })
         elif "SEO e tradução" in prompt or "gere versões em" in prompt:
             reply = json.dumps(i18n_payload())
         else:
