@@ -54,7 +54,7 @@ func New(cfg config.Config, st *store.Store, authSvc *auth.Service, log *slog.Lo
 	return &Server{
 		cfg: cfg, store: st, auth: authSvc, ai: aiSvc,
 		i18n: i18n.New(st, aiSvc), i18nSvc: i18nsite.New(st, aiSvc),
-		radar: radar.New(st, aiSvc), log: log,
+		radar: radar.New(st, aiSvc, radar.CollectConfig{AllowLoopback: cfg.AllowLoopbackFetch}), log: log,
 	}
 }
 
@@ -140,6 +140,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/v1/radar/ideas/generate", s.writeGuard(s.handleRadarIdeasGenerate))
 	mux.HandleFunc("POST /api/v1/radar/hype", s.writeGuard(s.handleRadarHype))
 	mux.HandleFunc("POST /api/v1/radar/ideas/{id}/to-draft", s.writeGuard(s.handleRadarIdeaToDraft))
+	mux.HandleFunc("POST /api/v1/radar/collect", s.writeGuard(s.handleRadarCollect))
 
 	// SEO/Traduções (escrita)
 	mux.HandleFunc("POST /api/v1/i18n/generate", s.writeGuard(s.handleI18nGenerate))
@@ -2019,6 +2020,34 @@ func (s *Server) handleRadarIdeaToDraft(w http.ResponseWriter, r *http.Request) 
 		"success": true,
 		"message": "Rascunho criado em Conteúdos",
 		"result":  map[string]any{"success": true, "artigo_id": artigoID, "slug": slug},
+	})
+}
+
+func (s *Server) handleRadarCollect(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		TopicID int `json:"topic_id"`
+	}
+	if !s.decodeJSON(w, r, &body) {
+		return
+	}
+	if body.TopicID <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "topic_id inválido"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 220*time.Second)
+	defer cancel()
+
+	runID, total, results, errors, err := s.radar.CollectRun(ctx, body.TopicID)
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"success": false, "message": err.Error(), "run_id": runID})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success":     true,
+		"run_id":      runID,
+		"saved_total": total,
+		"results":     results,
+		"errors":      errors,
 	})
 }
 

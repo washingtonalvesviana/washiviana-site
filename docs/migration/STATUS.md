@@ -33,7 +33,9 @@
 - [x] (b, parcial) **Radar (CRUD/listas)** → Go: temas (list/save/delete), fontes (list/save/delete), vínculo tema↔fonte, itens (list/delete por ids ou url_like), ideias (list/discard/sources). `radar_test.py` **16/16 PASS**.
 - [x] (b, parcial) **Radar (IA/clustering)** → Go: `POST /api/v1/radar/ideas/generate` (prompt + `GenerateJSON` multi-provedor; grava em `radar_ideas`) e `POST /api/v1/radar/hype` (clustering por Levenshtein + métricas velocity/hype_score/is_trending em `radar_items.raw`). `radar_ai_test.py` **4/4 PASS** (mock; sem chamadas externas).
 - [x] (b, parcial) **Radar `idea_to_draft`** → Go: `POST /api/v1/radar/ideas/{id}/to-draft` (modos `ai` e `simple`; cria artigo rascunho em `artigos`, marca a ideia como `virou_artigo`, slug único). `radar_draft_test.py` **7/7 PASS** (mock + cleanup).
-  - Adiado (documentado): `collect_run` (scraping/RSS — `radar_lib`) e o backup CSV no delete de itens.
+- [x] (b, parcial) **Radar `collect_run`** → Go: `POST /api/v1/radar/collect` (RSS 2.0/Atom, `scrape` de metadados e `api` com `*_path`; SSRF guard; dedupe por `url_norm` sem tracking; registra `radar_runs`). `radar_collect_test.py` **7/7 PASS** (feed RSS local).
+  - Nota: bypass de loopback para testes via `ALLOW_LOOPBACK_FETCH=1` (apenas no staging; produção `false`).
+  - Adiado (documentado): backup CSV no delete de itens.
 - [ ] (b) Demais endpoints → Go: linkedin/facebook/instagram, oauth callbacks (`linkedin-callback.php`, `oauth_callback.php`), categorias i18n e publicação (gated).
 - [ ] (c) Site público → Go/Next.js (strangler) — **próximo grande bloco**.
 - [ ] (d) Aposentar admin/site PHP após paridade.

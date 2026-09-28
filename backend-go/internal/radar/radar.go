@@ -19,13 +19,14 @@ import (
 
 // Service executa operações do radar.
 type Service struct {
-	store *store.Store
-	ai    *ai.Service
+	store   *store.Store
+	ai      *ai.Service
+	collect CollectConfig
 }
 
 // New cria o serviço.
-func New(st *store.Store, aiSvc *ai.Service) *Service {
-	return &Service{store: st, ai: aiSvc}
+func New(st *store.Store, aiSvc *ai.Service, cfg CollectConfig) *Service {
+	return &Service{store: st, ai: aiSvc, collect: cfg}
 }
 
 // GenerateIdeas gera ideias a partir dos itens coletados de um tema.

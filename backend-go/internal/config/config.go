@@ -10,18 +10,19 @@ import (
 // Config contém a configuração do serviço lida do ambiente.
 // Nenhum segredo é hardcoded: em produção use EnvironmentFile do systemd.
 type Config struct {
-	Env           string
-	Host          string
-	Port          string
-	DatabaseURL   string
-	MaxConns      int32
-	Version       string
-	InternalToken string
-	CookieSecure  bool
-	SessionTTL    time.Duration
-	UploadDir     string
-	UploadURL     string
-	SiteBaseURL   string
+	Env                string
+	Host               string
+	Port               string
+	DatabaseURL        string
+	MaxConns           int32
+	Version            string
+	InternalToken      string
+	CookieSecure       bool
+	SessionTTL         time.Duration
+	UploadDir          string
+	UploadURL          string
+	SiteBaseURL        string
+	AllowLoopbackFetch bool
 }
 
 // Load lê a configuração do ambiente. DATABASE_URL tem prioridade; se ausente,
@@ -59,6 +60,7 @@ func Load() (Config, error) {
 	c.UploadDir = getenv("UPLOAD_DIR", "/var/www/washiviana.com/uploads")
 	c.UploadURL = getenv("UPLOAD_URL", "/uploads/")
 	c.SiteBaseURL = getenv("SITE_BASE_URL", "https://washiviana.com")
+	c.AllowLoopbackFetch = getenv("ALLOW_LOOPBACK_FETCH", "0") == "1"
 
 	return c, nil
 }
