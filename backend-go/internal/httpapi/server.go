@@ -116,6 +116,21 @@ func (s *Server) Routes() http.Handler {
 	// Beacon de acessos (público, same-origin)
 	mux.HandleFunc("POST /api/v1/metrics/beacon", s.handleMetricsBeacon)
 
+	// Radar (temas, fontes, itens, ideias — CRUD/listas)
+	mux.HandleFunc("GET /api/v1/radar/topics", s.handleRadarTopicsList)
+	mux.HandleFunc("POST /api/v1/radar/topics", s.writeGuard(s.handleRadarTopicSave))
+	mux.HandleFunc("DELETE /api/v1/radar/topics/{id}", s.writeGuard(s.handleRadarTopicDelete))
+	mux.HandleFunc("GET /api/v1/radar/sources", s.handleRadarSourcesList)
+	mux.HandleFunc("POST /api/v1/radar/sources", s.writeGuard(s.handleRadarSourceSave))
+	mux.HandleFunc("DELETE /api/v1/radar/sources/{id}", s.writeGuard(s.handleRadarSourceDelete))
+	mux.HandleFunc("GET /api/v1/radar/topics/{id}/sources", s.handleRadarTopicSourcesGet)
+	mux.HandleFunc("POST /api/v1/radar/topics/{id}/sources", s.writeGuard(s.handleRadarTopicSourcesSet))
+	mux.HandleFunc("GET /api/v1/radar/items", s.handleRadarItemsList)
+	mux.HandleFunc("POST /api/v1/radar/items/delete", s.writeGuard(s.handleRadarItemsDelete))
+	mux.HandleFunc("GET /api/v1/radar/ideas", s.handleRadarIdeasList)
+	mux.HandleFunc("POST /api/v1/radar/ideas/{id}/discard", s.writeGuard(s.handleRadarIdeaDiscard))
+	mux.HandleFunc("GET /api/v1/radar/ideas/{id}/sources", s.handleRadarIdeaSources)
+
 	// SEO/Traduções (escrita)
 	mux.HandleFunc("POST /api/v1/i18n/generate", s.writeGuard(s.handleI18nGenerate))
 	mux.HandleFunc("POST /api/v1/i18n/status", s.writeGuard(s.handleI18nStatus))
@@ -1635,6 +1650,294 @@ func (s *Server) handleRedeSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "Configuração salva."})
+}
+
+// --- radar (CRUD/listas) ---
+
+func (s *Server) handleRadarTopicsList(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	defer cancel()
+	topics, err := s.store.RadarTopics(ctx)
+	if err != nil {
+		s.fail(w, "radar topics", err, "Erro ao listar temas.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "topics": topics})
+}
+
+func (s *Server) handleRadarTopicSave(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID               *int   `json:"id"`
+		Nome             string `json:"nome"`
+		Descricao        string `json:"descricao"`
+		Keywords         string `json:"keywords"`
+		Idiomas          string `json:"idiomas"`
+		Regioes          string `json:"regioes"`
+		CategoriaArtigos *int   `json:"categoria_artigos_id"`
+		Ativo            *bool  `json:"ativo"`
+	}
+	if !s.decodeJSON(w, r, &body) {
+		return
+	}
+	if strings.TrimSpace(body.Nome) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "Nome é obrigatório"})
+		return
+	}
+	idiomas := strings.TrimSpace(body.Idiomas)
+	if idiomas == "" {
+		idiomas = "pt,en"
+	}
+	regioes := strings.TrimSpace(body.Regioes)
+	if regioes == "" {
+		regioes = "br,us,eu"
+	}
+	ativo := true
+	if body.Ativo != nil {
+		ativo = *body.Ativo
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	defer cancel()
+	id, err := s.store.RadarTopicSave(ctx, body.ID, strings.TrimSpace(body.Nome), body.Descricao, body.Keywords, idiomas, regioes, body.CategoriaArtigos, ativo)
+	if err != nil {
+		s.fail(w, "radar topic save", err, "Erro ao salvar tema.")
+		return
+	}
+	msg := "Tema atualizado"
+	if body.ID == nil || *body.ID <= 0 {
+		msg = "Tema criado"
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": msg, "id": id})
+}
+
+func (s *Server) handleRadarTopicDelete(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "ID inválido"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	defer cancel()
+	if err := s.store.RadarTopicDelete(ctx, id); err != nil {
+		s.fail(w, "radar topic delete", err, "Erro ao remover tema.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "Tema removido"})
+}
+
+func (s *Server) handleRadarSourcesList(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	defer cancel()
+	sources, err := s.store.RadarSources(ctx)
+	if err != nil {
+		s.fail(w, "radar sources", err, "Erro ao listar fontes.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "sources": sources})
+}
+
+func (s *Server) handleRadarSourceSave(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID     *int   `json:"id"`
+		Nome   string `json:"nome"`
+		Tipo   string `json:"tipo"`
+		URL    string `json:"url"`
+		Config string `json:"config"`
+		Ativo  *bool  `json:"ativo"`
+	}
+	if !s.decodeJSON(w, r, &body) {
+		return
+	}
+	nome := strings.TrimSpace(body.Nome)
+	tipo := strings.TrimSpace(body.Tipo)
+	if tipo == "" {
+		tipo = "rss"
+	}
+	urlv := strings.TrimSpace(body.URL)
+	if nome == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "Nome é obrigatório"})
+		return
+	}
+	if tipo != "rss" && tipo != "api" && tipo != "scrape" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "Tipo inválido"})
+		return
+	}
+	if (tipo == "rss" || tipo == "scrape") && urlv == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "URL é obrigatória"})
+		return
+	}
+	cfg := strings.TrimSpace(body.Config)
+	if cfg != "" && !json.Valid([]byte(cfg)) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "Config JSON inválido"})
+		return
+	}
+	ativo := true
+	if body.Ativo != nil {
+		ativo = *body.Ativo
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	defer cancel()
+	id, err := s.store.RadarSourceSave(ctx, body.ID, nome, tipo, urlv, cfg, ativo)
+	if err != nil {
+		s.fail(w, "radar source save", err, "Erro ao salvar fonte.")
+		return
+	}
+	msg := "Fonte atualizada"
+	if body.ID == nil || *body.ID <= 0 {
+		msg = "Fonte criada"
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": msg, "id": id})
+}
+
+func (s *Server) handleRadarSourceDelete(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "ID inválido"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	defer cancel()
+	if err := s.store.RadarSourceDelete(ctx, id); err != nil {
+		s.fail(w, "radar source delete", err, "Erro ao remover fonte.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "Fonte removida"})
+}
+
+func (s *Server) handleRadarTopicSourcesGet(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "topic_id inválido"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	defer cancel()
+	ids, err := s.store.RadarTopicSourceIDs(ctx, id)
+	if err != nil {
+		s.fail(w, "radar topic sources", err, "Erro ao listar fontes do tema.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "source_ids": ids})
+}
+
+func (s *Server) handleRadarTopicSourcesSet(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "topic_id inválido"})
+		return
+	}
+	var body struct {
+		SourceIDs []int `json:"source_ids"`
+	}
+	if !s.decodeJSON(w, r, &body) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	if err := s.store.RadarTopicSourcesSet(ctx, id, body.SourceIDs); err != nil {
+		s.fail(w, "radar topic sources set", err, "Erro ao atualizar fontes do tema.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "Fontes do tema atualizadas"})
+}
+
+func (s *Server) handleRadarItemsList(w http.ResponseWriter, r *http.Request) {
+	topicID := atoiDefault(r.URL.Query().Get("topic_id"), 0)
+	limit := atoiDefault(r.URL.Query().Get("limit"), 50)
+	ctx, cancel := context.WithTimeout(r.Context(), 12*time.Second)
+	defer cancel()
+	items, err := s.store.RadarItems(ctx, topicID, limit)
+	if err != nil {
+		s.fail(w, "radar items", err, "Erro ao listar itens.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "items": items})
+}
+
+func (s *Server) handleRadarItemsDelete(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		IDs     []int  `json:"ids"`
+		URLLike string `json:"url_like"`
+	}
+	if !s.decodeJSON(w, r, &body) {
+		return
+	}
+	urlLike := strings.TrimSpace(body.URLLike)
+	if len(body.IDs) == 0 && urlLike == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "Parâmetros inválidos: envie ids (JSON) ou url_like"})
+		return
+	}
+	if len(body.IDs) > 1000 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "Limite de exclusão por requisição: 1000"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+	defer cancel()
+
+	var deleted int
+	var err error
+	if len(body.IDs) > 0 {
+		deleted, err = s.store.RadarItemsDeleteByIDs(ctx, body.IDs)
+	} else {
+		if len(urlLike) < 3 {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "Filtro muito curto, informe ao menos 3 caracteres"})
+			return
+		}
+		deleted, err = s.store.RadarItemsDeleteByURL(ctx, urlLike)
+	}
+	if err != nil {
+		s.fail(w, "radar items delete", err, "Erro ao remover itens.")
+		return
+	}
+	if deleted == 0 {
+		writeJSON(w, http.StatusNotFound, map[string]any{"success": false, "message": "Nenhum item encontrado"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "Itens removidos", "deleted_count": deleted})
+}
+
+func (s *Server) handleRadarIdeasList(w http.ResponseWriter, r *http.Request) {
+	topicID := atoiDefault(r.URL.Query().Get("topic_id"), 0)
+	limit := atoiDefault(r.URL.Query().Get("limit"), 50)
+	status := strings.TrimSpace(r.URL.Query().Get("status"))
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	ideas, err := s.store.RadarIdeas(ctx, topicID, status, limit)
+	if err != nil {
+		s.fail(w, "radar ideas", err, "Erro ao listar ideias.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "ideas": ideas})
+}
+
+func (s *Server) handleRadarIdeaDiscard(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "ID inválido"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	defer cancel()
+	if err := s.store.RadarIdeaDelete(ctx, id); err != nil {
+		s.fail(w, "radar idea discard", err, "Erro ao excluir ideia.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "Ideia excluída"})
+}
+
+func (s *Server) handleRadarIdeaSources(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "message": "ID inválido"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	defer cancel()
+	sources, err := s.store.RadarIdeaSourceItems(ctx, id)
+	if err != nil {
+		s.fail(w, "radar idea sources", err, "Erro ao buscar fontes da ideia.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "sources": sources})
 }
 
 // --- vídeos ---

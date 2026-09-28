@@ -30,7 +30,9 @@
 - [x] (b, parcial) **Beacon de métricas** → Go: `POST /api/v1/metrics/beacon` (same-origin + rate limit 60s por ip+path). `videos_beacon_test.py` **10/10 PASS**.
 - [x] (b, parcial) **Auth completo** → Go: `POST /api/v1/auth/change-password` (bcrypt, validações, invalida as outras sessões do usuário) e **`GET /api/v1/ai/gemini-models`** (lista modelos v1+v1beta, separa texto/imagem). `auth_models_test.py` **7/7 PASS** (senha alterada e RESTAURADA; chave Gemini restaurada).
 - [x] (b, parcial) **i18n do site** → Go: `POST /api/v1/i18n/site` (UI strings em chunks + configs via LLM; upsert em `ui_strings`/`configuracoes_i18n`). Divergência: **categorias** (categorias_i18n) ainda não incluídas. `i18nsite_test.py` **4/4 PASS** (com mock; chaves afetadas restauradas).
-- [ ] (b) Demais endpoints → Go: radar (+ radar_lib), linkedin/facebook/instagram, oauth callbacks (`linkedin-callback.php`, `oauth_callback.php`), categorias i18n e publicação (gated).
+- [x] (b, parcial) **Radar (CRUD/listas)** → Go: temas (list/save/delete), fontes (list/save/delete), vínculo tema↔fonte, itens (list/delete por ids ou url_like), ideias (list/discard/sources). `radar_test.py` **16/16 PASS**.
+  - Adiado (documentado): `collect_run` (scraping/RSS — `radar_lib`), `ideas_generate`, `idea_to_draft`, `analyze_hype` (IA) e o backup CSV no delete de itens.
+- [ ] (b) Demais endpoints → Go: linkedin/facebook/instagram, oauth callbacks (`linkedin-callback.php`, `oauth_callback.php`), categorias i18n e publicação (gated).
 - [ ] (c) Site público → Go/Next.js (strangler) — **próximo grande bloco**.
 - [ ] (d) Aposentar admin/site PHP após paridade.
 - [ ] (e) Otimização de imagem (GD) + `generate_images_multi` (1:1/9:16).
