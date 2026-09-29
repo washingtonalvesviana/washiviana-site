@@ -38,7 +38,7 @@
   - Nota: bypass de loopback para testes via `ALLOW_LOOPBACK_FETCH=1` (apenas no staging; produção `false`).
   - Adiado (documentado): backup CSV no delete de itens.
 - [ ] (b) Demais endpoints → Go: linkedin/facebook/instagram, oauth callbacks (`linkedin-callback.php`, `oauth_callback.php`), categorias i18n e publicação (gated).
-- [x] (c) **Site público → Go — CUTOVER FEITO**: nginx agora serve `/{lang}/...`, `/`, `/sitemap.xml` e `/robots.txt` pelo Go (:8082); beacon público em `POST /metrics/beacon`. PHP público permanece no disco como **rollback** (basta remover o bloco do nginx). Páginas Go (pt/en/es), com SEO (canonical/hreflang/OG) e CSS Tailwind do site:
+- [x] (c) **REVERTIDO — NÃO migrar o frontend público**: o cutover do site público para o Go foi **desfeito** (nginx restaurado do backup `nginx-washiviana.com.bak.20260928T220049`); o site público voltou a ser servido pelo PHP original (com formatação/imagens). O código Go do site permanece em `backend-go/internal/site` **sem roteamento**. **Escopo confirmado: só backend + admin; frontend público NÃO é para mexer.** (Notas abaixo ficam como histórico do protótipo, não aplicadas.)
   - `GET /site/{lang}/` (home), `/conteudos`, `/projetos`, `/sobre`, `/artigo/{slug}`, `/projeto/{slug}` (detalhe usa `*_i18n` por idioma; 404 quando inexistente).
   - `GET /site/{lang}/automacao-ia`, `/tech-insights`, `/design-experiencias` (landings; filtros por categoria/tag, com i18n).
   - `GET /sitemap.xml` (URLs finais + hreflang) e `GET /robots.txt`.
