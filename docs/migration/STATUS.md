@@ -44,7 +44,7 @@
   - `GET /sitemap.xml` (URLs finais + hreflang) e `GET /robots.txt`.
   - `site_test.py` **32/32 PASS**; validado via `https://washiviana.com` (todas as páginas 200), `/admin`, `/admin-next`, `/go-api`, `/assets` e `/api` intactos.
   - **Não** roteado no nginx público (site PHP continua no ar). Próximo: refino visual e cutover **após sua validação de design/SEO**.
-- [x] (d, parcial) **PHP do site público aposentado**: nginx não serve mais os entrypoints PHP públicos (`/index.php`, `/artigo.php`, … → 301 para Go); arquivos mantidos no disco apenas como rollback. **Admin PHP permanece** (publicação/OAuth dependem de tokens).
+- [ ] (d) Aposentar **admin PHP** após paridade (o site público **permanece em PHP** — não migrar o frontend).
   - Rollback do site: remover o bloco "Site público em Go" e a regra "PHP público aposentado" do nginx (backup em `/home/washi/backups/nginx-*.bak.*`).
 - [x] (e, parcial) **`generate_images_multi`** → Go: `POST /api/v1/ai/images-multi` gera a imagem base e cria recortes **1:1** e **9:16** (`ai_1x1_*.jpg`/`ai_9x16_*.jpg`), removendo a base. `images_multi_test.py` **6/6 PASS**.
   - **Otimizador portado** (`internal/ai/optimize.go`): resize bilinear sem ampliar + recompressão JPEG até ≤500KB (qualidade 85→60), aplicado aos recortes (1200x1200 e 1080x1920), como no PHP.
