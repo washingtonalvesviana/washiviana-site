@@ -17,7 +17,9 @@ import (
 	"strings"
 	"time"
 
+	"washiviana/backend/internal/ai"
 	"washiviana/backend/internal/config"
+	"washiviana/backend/internal/i18n"
 	"washiviana/backend/internal/metrics"
 	"washiviana/backend/internal/store"
 	"washiviana/backend/internal/video"
@@ -61,6 +63,8 @@ func main() {
 		runMetrics(ctx, logger, st, os.Args[2:])
 	case "video":
 		runVideo(ctx, logger, st, os.Args[2:], cfg.UploadDir)
+	case "i18n":
+		runI18n(ctx, logger, st, os.Args[2:])
 	default:
 		logger.Error("subcomando desconhecido", "cmd", cmd)
 		os.Exit(2)
@@ -134,6 +138,43 @@ func runVideo(ctx context.Context, logger *slog.Logger, st *store.Store, args []
 		os.Exit(1)
 	}
 	writeOut(map[string]any{"event": "video", "job_id": jobID, "status": status})
+}
+
+func runI18n(ctx context.Context, logger *slog.Logger, st *store.Store, args []string) {
+	entity := argValue(args, "--entity=")
+	id := argIntValue(args, "--id=", 0)
+	langsRaw := argValue(args, "--langs=")
+
+	if id <= 0 || (entity != "artigo" && entity != "projeto") {
+		logger.Error("uso: worker i18n --entity=artigo|projeto --id=N --langs=en,es")
+		os.Exit(2)
+	}
+	langs := []string{}
+	for _, l := range strings.Split(langsRaw, ",") {
+		if l = strings.TrimSpace(l); l != "" {
+			langs = append(langs, l)
+		}
+	}
+	if len(langs) == 0 {
+		langs = []string{"en", "es"}
+	}
+
+	svc := i18n.New(st, ai.New(st))
+	if entity == "artigo" {
+		saved, err := svc.GenerateArtigo(ctx, id, langs)
+		if err != nil {
+			logger.Error("i18n artigo", "error", err)
+			os.Exit(1)
+		}
+		writeOut(map[string]any{"event": "i18n", "entity": entity, "id": id, "saved": saved})
+		return
+	}
+	saved, err := svc.GenerateProjeto(ctx, id, langs)
+	if err != nil {
+		logger.Error("i18n projeto", "error", err)
+		os.Exit(1)
+	}
+	writeOut(map[string]any{"event": "i18n", "entity": entity, "id": id, "saved": saved})
 }
 
 func writeOut(v any) {

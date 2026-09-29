@@ -183,14 +183,37 @@ try {
 
 if ($tabelaArtigosExiste) {
     try {
-        // Busca os últimos 7 para saber se há mais de 6
-        $stmt = $pdo->query("SELECT a.*, ca.nome as categoria_nome
-                            FROM artigos a 
-                            LEFT JOIN categorias_artigos ca ON a.categoria_id = ca.id
-                            WHERE a.status_publicacao = 'publicado'
-                            ORDER BY a.created_at DESC 
-                            LIMIT 7");
-        $ultimosConteudos = $stmt->fetchAll();
+        // Busca os últimos 7 para saber se há mais de 6 (com i18n quando não for PT)
+        $langHome = defined('CURRENT_LANG') ? CURRENT_LANG : 'pt';
+        if ($langHome !== 'pt') {
+            $stmt = $pdo->prepare("SELECT a.*, COALESCE(ci.nome, ca.nome) as categoria_nome,
+                                          COALESCE(t.titulo, a.titulo) AS titulo_exib,
+                                          COALESCE(t.resumo, a.resumo) AS resumo_exib,
+                                          COALESCE(t.slug, a.slug) AS slug_exib
+                                   FROM artigos a
+                                   LEFT JOIN artigos_i18n t ON t.artigo_id = a.id AND t.lang = ?
+                                   LEFT JOIN categorias_artigos ca ON a.categoria_id = ca.id
+                                   LEFT JOIN categorias_artigos_i18n ci ON ci.categoria_id = ca.id AND ci.lang = ?
+                                   WHERE a.status_publicacao = 'publicado'
+                                   ORDER BY a.created_at DESC
+                                   LIMIT 7");
+            $stmt->execute([$langHome, $langHome]);
+            $ultimosConteudos = $stmt->fetchAll();
+        } else {
+            $stmt = $pdo->query("SELECT a.*, ca.nome as categoria_nome
+                                FROM artigos a 
+                                LEFT JOIN categorias_artigos ca ON a.categoria_id = ca.id
+                                WHERE a.status_publicacao = 'publicado'
+                                ORDER BY a.created_at DESC 
+                                LIMIT 7");
+            $ultimosConteudos = $stmt->fetchAll();
+        }
+        foreach ($ultimosConteudos as &$rowHome) {
+            if (isset($rowHome['titulo_exib']) && $rowHome['titulo_exib'] !== null && $rowHome['titulo_exib'] !== '') $rowHome['titulo'] = $rowHome['titulo_exib'];
+            if (isset($rowHome['resumo_exib']) && $rowHome['resumo_exib'] !== null && $rowHome['resumo_exib'] !== '') $rowHome['resumo'] = $rowHome['resumo_exib'];
+            if (isset($rowHome['slug_exib']) && $rowHome['slug_exib'] !== null && $rowHome['slug_exib'] !== '') $rowHome['slug'] = $rowHome['slug_exib'];
+        }
+        unset($rowHome);
     } catch (Exception $e) {
         $ultimosConteudos = [];
         error_log("Erro ao buscar últimos conteúdos: " . $e->getMessage());
@@ -565,7 +588,7 @@ function routeFromConfigLink(string $link): string {
                                             </p>
                                         </div>
                                         <span class="text-primary text-sm font-bold flex items-center gap-2 group-hover:gap-3 transition-all">
-                                            Ler artigo 
+                                            <?php echo htmlspecialchars(t('actions.read', 'Ler artigo')); ?> 
                                             <i class="ph ph-arrow-right text-base"></i>
                                         </span>
                                     </div>

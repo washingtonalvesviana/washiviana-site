@@ -22,6 +22,13 @@
 - [x] **(4) `COOKIE_SECURE=1`** definido no `api-prod.env` (produção HTTPS). Testes locais em HTTP seguem com a instância de staging (`COOKIE_SECURE=0`).
 - [ ] Publicação real em redes (LinkedIn/Meta) — depende de tokens OAuth válidos.
 
+## Correções de idioma do frontend (PHP)
+
+- [x] **Home `index.php`**: a listagem "Últimos conteúdos" passou a usar `artigos_i18n` (título/resumo/slug por idioma) e o CTA usa `t('actions.read')`. `conteudos.php`: CTA traduzido.
+- [x] **Slug corrompido** do artigo 34 (`Slug: …`) corrigido para `fim-da-vitrine-agentes-ia-ecommerce`.
+- [x] **Traduções EN/ES completas**: artigo 33 gerado via novo subcomando **`worker i18n --entity=artigo --id=33 --langs=en,es`** (CLI, reutilizável). `artigos_i18n` agora 16/16 en e es.
+- Validado: `/en/` e `/es/` com títulos/CTA/links corretos (`/en/article/…`, `/es/articulo/…` → 200). Site público segue em PHP.
+
 ## Programa "eliminar o PHP" (em andamento)
 
 - [x] **(a) Worker `metrics` cortado para Go**: systemd `washiviana-go-metrics.{service,timer}` (6h) ativo; `washiviana-metrics.timer` (PHP) **desabilitado antes** (sem duplicação). Validado contra produção: chamou a API real do LinkedIn e tratou "token expirado" com graça (`fail`, sem crash).

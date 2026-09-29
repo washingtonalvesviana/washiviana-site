@@ -370,7 +370,7 @@ if ($categoriaAtual) {
                                         </div>
                                         
                                         <span class="text-primary text-sm font-bold flex items-center gap-2 group-hover:gap-3 transition-all">
-                                            Ler artigo 
+                                            <?php echo htmlspecialchars(t('actions.read', 'Ler artigo')); ?> 
                                             <i class="ph ph-arrow-right text-base"></i>
                                         </span>
                                     </div>
