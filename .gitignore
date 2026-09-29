@@ -49,3 +49,6 @@ desktop.ini
 /outros/test_correct_token.php
 /outros/test_linkedin_full.php
 /outros/test_linkedin_simple.php
+
+# Deploy: cópia do admin PHP antigo (fallback) — gerada no servidor
+admin-legacy/

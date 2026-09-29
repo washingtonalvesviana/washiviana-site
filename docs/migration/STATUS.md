@@ -162,6 +162,9 @@ RESULTADO: TUDO OK
 
 ### (c) Admin novo responsivo — em andamento
 
+- [x] **Admin novo agora em `/admin/`** (nginx serve a SPA `admin-next/` em `/admin/`); o admin PHP antigo continua em **`/admin-legacy/`** (fallback para recursos ainda não portados, ex.: publicação). `/admin-next/` segue acessível.
+  - Rollback: remover o bloco `/admin/` do nginx (backup `nginx-*.bak.*`) — o PHP volta em `/admin/`.
+
 - [x] **Fundação entregue** (SPA estática responsiva, sem build): `admin-next/` (`index.html`, `app.js`, `styles.css`).
   - Login (sessão + CSRF), shell responsivo (sidebar com hambúrguer no mobile), Dashboard (contagens), **Conteúdos** (list/create/edit/delete) e **Categorias** (list/create/delete).
   - Consome a API Go via `/go-api/` (mesma origem; cookie de sessão httpOnly).
